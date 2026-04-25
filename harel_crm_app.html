@@ -1447,6 +1447,14 @@ function openNewProject() {
   const todayStr = new Date().toISOString().split('T')[0];
   if (!suppliers.length) loadSuppliers().then(updateSupplierDatalist);
   else updateSupplierDatalist();
+  // Populate client datalist
+  setTimeout(() => {
+    const dl = document.getElementById('clients-datalist');
+    if (dl) {
+      const names = [...new Set(projects.map(p => p['לקוח-שם']).filter(Boolean))].sort();
+      dl.innerHTML = names.map(n => `<option value="${n}">`).join('');
+    }
+  }, 50);
   openModal(`
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
       <div class="modal">
@@ -1458,7 +1466,10 @@ function openNewProject() {
           <div class="section-title">פרטי הפרויקט</div>
           <div class="field"><label>שם פרויקט *</label><input id="nn" type="text" placeholder="שם הפרויקט" autofocus></div>
           <div class="row2">
-            <div class="field"><label>לקוח / משרד</label><input id="nc" type="text" placeholder="שם המשרד"></div>
+            <div class="field"><label>לקוח / משרד</label>
+              <input id="nc" type="text" placeholder="שם המשרד" list="clients-datalist" autocomplete="off">
+              <datalist id="clients-datalist"></datalist>
+            </div>
             <div class="field"><label>מקור פנייה</label><select id="nso">
               <option value="">בחר...</option>
               <option>פנייה ישירה</option><option>המלצה</option><option>לקוח חוזר</option><option>וואטסאפ</option><option>אחר</option>
