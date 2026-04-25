@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: harel-crm
+    runtime: python
+    buildCommand: ""
+    startCommand: python crm_server.py
+    envVars:
+      - key: PORT
+        value: 8765

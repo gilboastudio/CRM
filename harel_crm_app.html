@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM — הראל גלבוע</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #1a1a1a;
+    --text2: #6b6b6b;
+    --text3: #a0a0a0;
+    --accent: #1a1a1a;
+    --green: #2d6a4f;
+    --green-bg: #e8f5e9;
+    --orange: #7c4a1e;
+    --orange-bg: #fff3e0;
+    --blue: #1565c0;
+    --blue-bg: #e3f2fd;
+    --red: #b71c1c;
+    --red-bg: #ffebee;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); direction: rtl; font-size: 14px; line-height: 1.5; }
+
+  /* Layout */
+  .app { display: flex; flex-direction: column; height: 100vh; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; flex-shrink: 0; }
+  .header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; gap: 0; flex-shrink: 0; }
+  .nav-tab { padding: 12px 16px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--text); border-bottom-color: var(--text); }
+  .content { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+  /* Buttons */
+  .btn { padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 13px; font-family: 'Heebo', sans-serif; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+  .btn:hover { background: var(--surface2); }
+  .btn-primary { background: var(--text); color: var(--surface); border-color: transparent; }
+  .btn-primary:hover { opacity: 0.85; background: var(--text); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-ghost { border-color: transparent; background: transparent; }
+  .btn-ghost:hover { background: var(--surface2); }
+  .icon-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface); cursor: pointer; font-size: 14px; transition: all 0.15s; }
+  .icon-btn:hover { background: var(--surface2); }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .stat-label { font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+  .stat-value { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+
+  /* Filter bar */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .filter-select { padding: 6px 10px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 12px; font-family: 'Heebo', sans-serif; cursor: pointer; }
+  .filter-label { font-size: 12px; color: var(--text2); }
+
+  /* Cards */
+  .cards-list { display: flex; flex-direction: column; gap: 8px; }
+  .project-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; transition: all 0.15s; box-shadow: var(--shadow); }
+  .project-card:hover { border-color: var(--border2); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .card-row { display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-size: 14px; font-weight: 600; }
+  .card-amount { font-size: 13px; font-weight: 600; }
+  .card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; }
+  .badge-default { background: var(--surface2); color: var(--text2); }
+  .badge-todo { background: var(--orange-bg); color: var(--orange); }
+  .badge-inprog { background: var(--blue-bg); color: var(--blue); }
+  .badge-done { background: var(--green-bg); color: var(--green); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .followup-alert { background: var(--red-bg); color: var(--red); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+
+  /* Client cards */
+  .client-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; transition: all 0.15s; box-shadow: var(--shadow); margin-bottom: 8px; }
+  .client-card:hover { border-color: var(--border2); }
+  .client-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--blue-bg); color: var(--blue); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+  .client-info { flex: 1; }
+  .client-name { font-size: 14px; font-weight: 600; }
+  .client-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
+  .modal { background: var(--surface); border-radius: 14px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+  .modal-header { padding: 20px 24px 0; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--surface); padding-bottom: 16px; border-bottom: 1px solid var(--border); z-index: 1; }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .modal-body { padding: 20px 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; position: sticky; bottom: 0; background: var(--surface); }
+
+  /* Form */
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 13px; font-family: 'Heebo', sans-serif; transition: border 0.15s; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #999; }
+  .field textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .section-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin: 18px 0 10px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* Checklist */
+  .checklist { display: flex; flex-direction: column; gap: 6px; }
+  .check-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-sm); cursor: pointer; transition: background 0.1s; }
+  .check-row:hover { background: var(--surface2); }
+  .check-row input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--text); }
+  .check-row span { font-size: 13px; }
+  .check-row.checked span { color: var(--text2); text-decoration: line-through; }
+
+  /* Supplier rows */
+  .supplier-row { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); }
+  .supplier-row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .supplier-row-title { font-size: 13px; font-weight: 600; }
+  .add-sup-btn { width: 100%; padding: 9px; border: 1px dashed var(--border2); border-radius: var(--radius-sm); background: transparent; color: var(--text2); font-size: 13px; font-family: 'Heebo', sans-serif; cursor: pointer; transition: all 0.15s; margin-top: 4px; }
+  .add-sup-btn:hover { background: var(--surface2); border-color: var(--text3); }
+
+  /* Finance */
+  .finance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .finance-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+
+  /* Detail grid */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .detail-item { }
+  .detail-item .label { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 3px; }
+  .detail-item .value { font-size: 13px; font-weight: 500; }
+  .detail-item select { width: 100%; padding: 6px 8px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; font-family: 'Heebo', sans-serif; background: var(--surface); cursor: pointer; }
+
+  /* Setup screen */
+  .setup-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 24px; }
+  .setup-card { background: var(--surface); border-radius: 16px; padding: 36px; max-width: 480px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.08); border: 1px solid var(--border); }
+  .setup-logo { font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .setup-subtitle { font-size: 13px; color: var(--text2); margin-bottom: 28px; line-height: 1.6; }
+  .setup-steps { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 20px; font-size: 12px; color: var(--text2); line-height: 1.8; }
+  .setup-steps a { color: var(--blue); }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: 10px 20px; border-radius: 99px; font-size: 13px; font-weight: 500; z-index: 999; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: toastin 0.2s ease; }
+  @keyframes toastin { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+  .loading { text-align: center; padding: 60px; color: var(--text3); font-size: 14px; }
+  .empty { text-align: center; padding: 60px; color: var(--text3); font-size: 14px; }
+
+  .notice { background: var(--blue-bg); color: var(--blue); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 12px; margin-bottom: 16px; line-height: 1.5; }
+
+  .pitem { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--surface2); border-radius: var(--radius-sm); margin-bottom: 6px; cursor: pointer; transition: background 0.1s; }
+  .pitem:hover { background: var(--border); }
+  .pitem-title { font-size: 13px; font-weight: 500; }
+  .pitem-right { display: flex; gap: 8px; align-items: center; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .row2 { grid-template-columns: 1fr; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .content { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="password-screen" style="display:none">
+  <div class="setup-screen">
+    <div class="setup-card">
+      <div class="setup-logo">הראל גלבוע — CRM</div>
+      <div class="setup-subtitle">מערכת ניהול פנימית. גישה מורשים בלבד.</div>
+      <div class="field">
+        <label>סיסמה</label>
+        <input type="password" id="pwd-input" placeholder="הזן סיסמה..." onkeydown="if(event.key==='Enter')checkPassword()">
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:11px" onclick="checkPassword()">כניסה</button>
+      <p id="pwd-error" style="font-size:12px;color:var(--red);text-align:center;margin-top:8px;display:none">סיסמה שגויה</p>
+    </div>
+  </div>
+</div>
+
+<div id="setup-screen" style="display:none">
+  <div class="setup-screen">
+    <div class="setup-card">
+      <div class="setup-logo">הראל גלבוע — CRM</div>
+      <div class="setup-subtitle">חיבור חד-פעמי ל-Notion. הנתונים נשמרים אצלך לצמיתות.</div>
+      <div class="setup-steps">
+        <strong>הגדרת Notion Integration (פעם אחת):</strong><br>
+        1. כנס ל: <a href="https://www.notion.so/my-integrations" target="_blank">notion.so/my-integrations</a><br>
+        2. לחץ "New integration" ← שם: CRM<br>
+        3. העתק את ה-Token ("Internal Integration Token")<br>
+        4. הדבק כאן ←
+      </div>
+      <div class="field">
+        <label>Notion Integration Token</label>
+        <input type="password" id="token-input" placeholder="secret_..." style="font-family: monospace">
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:11px" onclick="saveToken()">התחבר</button>
+      <p style="font-size:11px;color:var(--text3);margin-top:12px;text-align:center">הטוקן נשמר רק בדפדפן שלך ולא עובר לשום שרת</p>
+    </div>
+  </div>
+</div>
+
+<div id="main-app" style="display:none">
+  <div class="app">
+    <div class="header">
+      <h1>CRM — הראל גלבוע</h1>
+      <div class="header-actions">
+        <button class="btn" onclick="openFollowups()">⚡ פולואפ</button>
+        <button class="btn btn-primary" onclick="openNewProject()">+ פרויקט חדש</button>
+        <div class="icon-btn" onclick="logout()" title="התנתק">⚙</div>
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-tab active" onclick="switchTab('projects',this)">פרויקטים</div>
+      <div class="nav-tab" onclick="switchTab('clients',this)">לקוחות</div>
+      <div class="nav-tab" onclick="switchTab('suppliers',this)">ספקים</div>
+      <div class="nav-tab" onclick="switchTab('calendar',this)">לוח שנה</div>
+      <div class="nav-tab" onclick="switchTab('summaries',this)">סיכום ימי צילום</div>
+      <div class="nav-tab" onclick="switchTab('finance',this)">פיננסי</div>
+    </div>
+    <div class="content">
+      <div id="tab-projects">
+        <div class="stats-grid" id="stats-bar"></div>
+        <div class="filter-bar">
+          <input type="text" id="fsearch" placeholder="🔍 חיפוש פרויקט / לקוח / מיקום..." onkeyup="renderProjects()" style="padding:6px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-sans);background:var(--surface);color:var(--text);min-width:220px">
+          <span class="filter-label">סינון:</span>
+          <select class="filter-select" id="fs" onchange="renderProjects()">
+            <option value="">כל הסטטוסים</option>
+            <option>שיחה נכנסת</option><option>הצעה נשלחה</option><option>ממתין לאישור</option>
+            <option>מאושר - בתיאום</option><option>סיור לוקיישן</option><option>ממתין ליום צילום</option>
+            <option>ממתין לעריכה</option><option>נמסר ללקוח</option><option>מכירת ספקים</option><option>ממתין לתשלום</option><option>Done</option>
+          </select>
+          <select class="filter-select" id="fb" onchange="renderProjects()">
+            <option value="">כל הסטטוסים העסקיים</option>
+            <option>בתהליך</option><option>נסגר</option><option>לא נסגר</option>
+          </select>
+          <button class="btn btn-sm" onclick="loadProjects()" style="margin-right:auto">↺ רענן</button>
+        </div>
+        <div class="cards-list" id="projects-list"><div class="loading">טוען פרויקטים...</div></div>
+      </div>
+      <div id="tab-clients" style="display:none"><div id="clients-content"><div class="loading">טוען...</div></div></div>
+      <div id="tab-suppliers" style="display:none">
+        <div class="filter-bar">
+          <input type="text" id="sup-search" placeholder="🔍 חיפוש ספק..." onkeyup="renderSuppliers()" style="padding:6px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-sans);background:var(--surface);color:var(--text);min-width:200px">
+          <select class="filter-select" id="sup-project" onchange="renderSuppliers()">
+            <option value="">כל הפרויקטים</option>
+          </select>
+          <button class="btn btn-sm" onclick="loadSuppliers()" style="margin-right:auto">↺ רענן</button>
+        </div>
+        <div class="cards-list" id="suppliers-list"><div class="loading">טוען...</div></div>
+      </div>
+      <div id="tab-calendar" style="display:none"><div id="calendar-content"></div></div>
+      <div id="tab-summaries" style="display:none">
+        <div class="filter-bar">
+          <select class="filter-select" id="sum-sector" onchange="renderSummaries()">
+            <option value="">כל הסקטורים</option>
+            ${SECTORS.map(s=>`<option value="${s}">${s}</option>`).join('')}
+          </select>
+          <select class="filter-select" id="sum-category" onchange="renderSummaries()">
+            <option value="">כל הקטגוריות</option>
+          </select>
+          <input type="date" id="sum-from" onchange="renderSummaries()" class="filter-select" placeholder="מתאריך">
+          <input type="date" id="sum-to" onchange="renderSummaries()" class="filter-select" placeholder="עד תאריך">
+          <button class="btn btn-sm" onclick="loadSummaries()" style="margin-right:auto">↺ רענן</button>
+        </div>
+        <div id="summaries-list"><div class="loading">טוען...</div></div>
+      </div>
+      <div id="tab-finance" style="display:none"><div id="finance-content"><div class="loading">טוען...</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-container"></div>
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────
+const DB_PROJECTS = '462d1169d9814c3a806c843f53703942';
+let DB_SUMMARIES = (() => {
+  // Version 3 — fresh DB created by user token
+  const v = localStorage.getItem('crm_db_summaries_v');
+  if (v !== '4') { localStorage.removeItem('crm_db_summaries'); localStorage.setItem('crm_db_summaries_v','4'); }
+  return localStorage.getItem('crm_db_summaries') || '';
+})();
+const SECTORS = ['פרטי','מבנה ציבור','מבנה חינוך','מבנה תעשייה','מסחרי'];
+const SECTOR_CATEGORIES = {
+  'פרטי':         ['בית פרטי','דירה','פנטהאוז','בניין מגורים'],
+  'מבנה ציבור':   ['מוזיאון','ממשלתי','בית חולים','מבנה תרבות'],
+  'מבנה חינוך':   ['אוניברסיטה','תיכון','בית ספר','גן ילדים'],
+  'מבנה תעשייה':  ['מפעל','מרלו"ג'],
+  'מסחרי':        ['משרדים','בית מלון','מסעדה','חנות','לובי'],
+};
+const DB_SUPPLIERS = 'e3c62c03be9042c5b28d001293746fc2';
+const DB_CLIENTS = '046d5ac7985644e090f35249f060a510';
+const NOTION_VERSION = '2022-06-28';
+// השרת הלוקלי מבצע proxy ל-Notion API
+// Auto-detect server URL — works locally and on Render
+const LOCAL_PROXY = window.location.hostname === 'localhost' 
+  ? 'http://localhost:8765/notion'
+  : window.location.origin + '/notion';
+
+const PIPELINE = ['שיחה נכנסת','הצעה נשלחה','ממתין לאישור','מאושר - בתיאום','סיור לוקיישן','ממתין ליום צילום','יום צילום','ממתין לעריכה','נמסר ללקוח','ממתין לתשלום','מכירת ספקים','Done','בוטל'];
+const PKGS = ['5 תמונות — 1000₪','10 תמונות — 1500₪','20 תמונות — 2000₪','כל הסט — 2500₪','מחיר מותאם'];
+const PKG_PRICES = {'5 תמונות — 1000₪':1000,'10 תמונות — 1500₪':1500,'20 תמונות — 2000₪':2000,'כל הסט — 2500₪':2500};
+
+let token = '';
+let projects = [], suppliers = [], clients = [];
+let clientNames = {}; // id -> name cache
+let newSuppliers = [];
+
+// ─── Notion API ───────────────────────────────────────────────────────────
+async function notionAPI(method, path, body) {
+  const url = LOCAL_PROXY + path;
+  const res = await fetch(url, {
+    method,
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json',
+      'Notion-Version': NOTION_VERSION
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  return res.json();
+}
+
+async function queryDB(dbId, filter, sorts) {
+  let all = [], cursor = undefined;
+  do {
+    const body = {};
+    if (filter) body.filter = filter;
+    if (sorts) body.sorts = sorts;
+    if (cursor) body.start_cursor = cursor;
+    body.page_size = 100;
+    const res = await notionAPI('POST', `/databases/${dbId}/query`, body);
+    all = all.concat(res.results || []);
+    cursor = res.next_cursor;
+  } while (cursor);
+  return all;
+}
+
+// ─── Data parsing ─────────────────────────────────────────────────────────
+function propText(page, name) {
+  const p = page.properties?.[name];
+  if (!p) return '';
+  if (p.type === 'title') return p.title?.map(t=>t.plain_text).join('') || '';
+  if (p.type === 'rich_text') return p.rich_text?.map(t=>t.plain_text).join('') || '';
+  if (p.type === 'select') return p.select?.name || '';
+  if (p.type === 'number') return p.number ?? null;
+  if (p.type === 'checkbox') return p.checkbox;
+  if (p.type === 'date') return p.date?.start || '';
+  if (p.type === 'status') return p.status?.name || '';
+  if (p.type === 'relation') return (p.relation || []).map(r => normalizeId(r.id || ''));
+  if (p.type === 'rollup') return p.rollup?.number ?? null;
+  if (p.type === 'formula') return p.formula?.number ?? null;
+  return '';
+}
+
+function parseProject(page) {
+  return {
+    id: page.id,
+    url: page.url,
+    'שם פרויקט': propText(page,'שם פרויקט'),
+    'לקוח': propText(page,'לקוח'), // array of ids
+    'לקוח-שם': '', // filled later
+    'סטטוס': propText(page,'סטטוס'),
+    'סטטוס עסקי': propText(page,'סטטוס עסקי'),
+    'סכום הצעה': propText(page,'סכום הצעה') ?? null,
+    'הכנסה סופית': propText(page,'הכנסה סופית'),
+    'סה״כ הכנסות ספקים': propText(page,'סה״כ הכנסות ספקים'),
+    'date:מועד צילום:start': propText(page,'מועד צילום'),
+    'date:תאריך הזנה:start': propText(page,'תאריך הזנה'),
+    'date:תאריך פולואפ:start': propText(page,'תאריך פולואפ'),
+    'הערות': propText(page,'הערות'),
+    'סקטור': propText(page,'סקטור'),
+    'קטגוריה': propText(page,'קטגוריה'),
+    'ממתין לתשלום': propText(page,'ממתין לתשלום'),
+    'מיקום': propText(page,'מיקום'),
+    'סוג שירות': propText(page,'סוג שירות'),
+    'היקף': propText(page,'היקף'),
+    'מקור פנייה': propText(page,'מקור פנייה'),
+    'הערות שיחה ראשונה': propText(page,'הערות שיחה ראשונה'),
+    'סיור לוקיישן': propText(page,'סיור לוקיישן'),
+    'חוזה נחתם': propText(page,'חוזה נחתם'),
+    'מקדמה שולמה': propText(page,'מקדמה שולמה'),
+    'יתרה שולמה': propText(page,'יתרה שולמה'),
+    'הסכם זכויות': propText(page,'הסכם זכויות'),
+    'חשבונית הוצאה': propText(page,'חשבונית הוצאה'),
+    'ספקים': propText(page,'ספקים'),
+  };
+}
+
+function parseSupplier(page) {
+  return {
+    id: page.id,
+    'שם ספק': propText(page,'שם ספק'),
+    'מודל': propText(page,'מודל'),
+    'חבילה': propText(page,'חבילה'),
+    'כמות תמונות': propText(page,'כמות תמונות'),
+    'סכום מכירה — רכישה': propText(page,'סכום מכירה — רכישה'),
+    'עלות ספק משתתף': propText(page,'עלות ספק משתתף'),
+    'פרויקט': propText(page,'פרויקט'),
+    'תשלום התקבל': propText(page,'תשלום התקבל'),
+    'חשבון עסקה נשלח': propText(page,'חשבון עסקה נשלח'),
+    'קישור חותמת מים נשלח': propText(page,'קישור חותמת מים נשלח'),
+    'חוזה / הסכם זכויות': propText(page,'חוזה / הסכם זכויות'),
+    'קישור הורדה נשלח': propText(page,'קישור הורדה נשלח'),
+    'איש קשר': propText(page,'איש קשר'),
+    'טלפון': propText(page,'טלפון'),
+    'מייל': propText(page,'מייל'),
+    'תפקיד': propText(page,'תפקיד'),
+  };
+}
+
+function parseClient(page) {
+  return {
+    id: page.id,
+    'שם משרד': propText(page,'שם משרד'),
+    'איש קשר': propText(page,'איש קשר'),
+    'טלפון': propText(page,'טלפון'),
+    'מייל': propText(page,'מייל'),
+    'פרויקטים': propText(page,'פרויקטים'),
+  };
+}
+
+// ─── Load data ────────────────────────────────────────────────────────────
+async function loadProjects() {
+  document.getElementById('projects-list').innerHTML = '<div class="loading">טוען פרויקטים...</div>';
+  try {
+    const [pages] = await Promise.all([
+      queryDB(DB_PROJECTS, null, [{ property: 'תאריך הזנה', direction: 'descending' }, { timestamp: 'created_time', direction: 'descending' }]),
+      loadAllClients()
+    ]);
+    projects = pages.map(parseProject);
+    // Map client IDs to names
+    const clientIds = [...new Set(projects.flatMap(p => Array.isArray(p['לקוח']) ? p['לקוח'] : []))];
+    await loadClientNames(clientIds);
+    projects.forEach(p => {
+      if (Array.isArray(p['לקוח']) && p['לקוח'].length) {
+        const cid = normalizeId(p['לקוח'][0]);
+        p['לקוח-שם'] = clientNames[cid] || clientNames[p['לקוח'][0]] || '';
+      }
+      p['ספקים-משתתפים'] = [];
+    });
+    // Load participating suppliers for all projects
+    await loadParticipatingSuppliers();
+    renderProjects();
+    renderStats();
+  } catch(e) {
+    document.getElementById('projects-list').innerHTML = '<div class="loading" style="color:var(--red)">שגיאה: ' + e.message + '<br><br><small>ודא שהשרת רץ: python3 crm_server.py</small></div>';
+  }
+}
+
+function normalizeId(id) {
+  return (id || '').replace(/-/g, '').toLowerCase();
+}
+
+async function loadParticipatingSuppliers() {
+  try {
+    const res = await notionAPI('POST', '/databases/' + DB_SUPPLIERS + '/query', {
+      filter: { property: 'מודל', select: { equals: 'השתתפות בצילומים' } },
+      page_size: 100
+    });
+    const sups = (res.results || []).map(parseSupplier);
+    sups.forEach(s => {
+      const projectIds = Array.isArray(s['פרויקט']) ? s['פרויקט'] : [];
+      projectIds.forEach(pid => {
+        const nid = normalizeId(pid);
+        const p = projects.find(x => normalizeId(x.id) === nid);
+        if (p && s['שם ספק']) {
+          if (!p['ספקים-משתתפים']) p['ספקים-משתתפים'] = [];
+          p['ספקים-משתתפים'].push(s['שם ספק']);
+        }
+      });
+    });
+  } catch(e) { console.warn('loadParticipatingSuppliers failed:', e.message); }
+}
+
+async function loadAllClients() {
+  try {
+    let all = [], cursor = undefined;
+    do {
+      const body = { page_size: 100 };
+      if (cursor) body.start_cursor = cursor;
+      const res = await notionAPI('POST', '/databases/' + DB_CLIENTS + '/query', body);
+      all = all.concat(res.results || []);
+      cursor = res.next_cursor;
+    } while (cursor);
+    all.forEach(page => {
+      const props = page.properties || {};
+      const titleProp = props['שם משרד'] || Object.values(props).find(p => p.type === 'title');
+      const name = titleProp ? (titleProp.title || []).map(t => t.plain_text || '').join('').trim() : '';
+      if (name) {
+        const nid = normalizeId(page.id);
+        clientNames[nid] = name;
+        clientNames[page.id] = name; // also store with dashes
+      }
+    });
+  } catch(e) { console.warn('loadAllClients failed:', e.message); }
+}
+
+async function loadClientNames(ids) {
+  for (const id of ids) {
+    const nid = normalizeId(id);
+    if (clientNames[nid] !== undefined) continue;
+    try {
+      const page = await notionAPI('GET', '/pages/' + id, null);
+      const props = page.properties || {};
+      const titleProp = props['שם משרד'] || Object.values(props).find(p => p.type === 'title');
+      const name = titleProp ? (titleProp.title || []).map(t => t.plain_text || '').join('').trim() : '';
+      clientNames[nid] = name || '';
+      clientNames[id] = name || '';
+    } catch(e) { clientNames[nid] = ''; }
+  }
+}
+
+async function loadSuppliers() {
+  document.getElementById('suppliers-list').innerHTML = '<div class="loading">טוען ספקים...</div>';
+  try {
+    const pages = await queryDB(DB_SUPPLIERS);
+    suppliers = pages.map(parseSupplier);
+    renderSuppliers();
+  } catch(e) {
+    document.getElementById('suppliers-list').innerHTML = '<div class="loading">שגיאה: ' + e.message + '</div>';
+  }
+}
+
+async function loadClients() {
+  document.getElementById('clients-content').innerHTML = '<div class="loading">טוען לקוחות...</div>';
+  try {
+    const pages = await queryDB(DB_CLIENTS);
+    clients = pages.map(parseClient);
+    renderClients();
+  } catch(e) {
+    document.getElementById('clients-content').innerHTML = '<div class="loading">שגיאה: ' + e.message + '</div>';
+  }
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────
+function fmt(n) { if (!n && n !== 0) return '—'; return Number(n).toLocaleString('he-IL') + ' ₪'; }
+
+function sbc(s) {
+  if (!s) return 'badge-default';
+  if (['Done','נסגר'].includes(s)) return 'badge-done';
+  if (['בוטל','לא נסגר'].includes(s)) return 'badge-red';
+  if (['שיחה נכנסת','הצעה נשלחה','ממתין לאישור'].includes(s)) return 'badge-todo';
+  return 'badge-inprog';
+}
+
+function renderStats() {
+  const act = projects.filter(p=>p['סטטוס עסקי']==='בתהליך');
+  const tA = act.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
+  const cl = projects.filter(p=>p['סטטוס עסקי']==='נסגר');
+  const tC = cl.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
+  const today = new Date().toISOString().split('T')[0];
+  const fu = projects.filter(p=>p['date:תאריך פולואפ:start']&&p['date:תאריך פולואפ:start']<=today).length;
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-card"><div class="stat-label">פרויקטים פעילים</div><div class="stat-value">${act.length}</div></div>
+    <div class="stat-card"><div class="stat-label">שווי הצעות פתוחות</div><div class="stat-value" style="font-size:17px">${fmt(tA)}</div></div>
+    <div class="stat-card"><div class="stat-label">סגירות</div><div class="stat-value" style="font-size:17px">${fmt(tC)}</div></div>
+    <div class="stat-card"><div class="stat-label">פולואפים דחופים</div><div class="stat-value" style="${fu>0?'color:var(--red)':''}">${fu}</div></div>`;
+}
+
+function renderProjects() {
+  const sf = document.getElementById('fs')?.value||'';
+  const bf = document.getElementById('fb')?.value||'';
+  const sq = (document.getElementById('fsearch')?.value||'').toLowerCase().trim();
+  let list = [...projects];
+  if (sf) list = list.filter(p=>p['סטטוס']===sf);
+  if (bf) list = list.filter(p=>p['סטטוס עסקי']===bf);
+  if (sq) list = list.filter(p=>
+    (p['שם פרויקט']||'').toLowerCase().includes(sq) ||
+    (p['לקוח-שם']||'').toLowerCase().includes(sq) ||
+    (p['מיקום']||'').toLowerCase().includes(sq)
+  );
+  const today = new Date().toISOString().split('T')[0];
+  if (!list.length) { document.getElementById('projects-list').innerHTML='<div class="empty">אין פרויקטים להצגה</div>'; return; }
+
+  const active = list.filter(p => p['סטטוס עסקי'] === 'בתהליך' || !p['סטטוס עסקי']);
+  const done   = list.filter(p => p['סטטוס עסקי'] === 'נסגר').sort((a,b) => (b['date:מועד צילום:start']||'').localeCompare(a['date:מועד צילום:start']||''));
+  const lost   = list.filter(p => p['סטטוס עסקי'] === 'לא נסגר');
+
+  function cardHtml(p) {
+    const fu = p['date:תאריך פולואפ:start'];
+    const isDue = fu && fu <= today;
+    const clientLabel = p['לקוח-שם'] || '';
+    return `<div class="project-card" onclick="openProject('${p.id}')">
+      <div class="card-row">
+        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+          <span class="card-title">${p['שם פרויקט']||'—'}</span>
+          ${clientLabel ? `<span style="font-size:12px;color:var(--text2)">${clientLabel}</span>` : ''}
+        </div>
+        <span class="card-amount">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</span>
+      </div>
+      <div class="card-meta">
+        ${p['סטטוס']?`<span class="badge ${sbc(p['סטטוס'])}">${p['סטטוס']}</span>`:''}
+        ${p['date:מועד צילום:start']?`<span class="badge badge-default">📅 ${p['date:מועד צילום:start']}</span>`:''}
+        ${p['סוג שירות']?`<span class="badge badge-default">${p['סוג שירות']}</span>`:''}
+        ${p['סקטור']?`<span class="badge badge-default">${p['סקטור']}</span>`:''}
+        ${p['קטגוריה']?`<span class="badge badge-default">${p['קטגוריה']}</span>`:''}
+        ${isDue?`<span class="followup-alert">פולואפ!</span>`:''}
+      </div>
+    </div>`;
+  }
+
+  function sectionHeader(title, count, dotColor) {
+    return `<div style="display:flex;align-items:center;gap:10px;margin:20px 0 10px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${dotColor};flex-shrink:0"></div>
+      <span style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px">${title} · ${count}</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>`;
+  }
+
+  let html = '';
+  if (active.length) html += sectionHeader('בתהליך', active.length, '#185fa5') + active.map(cardHtml).join('');
+  if (done.length)   html += sectionHeader('נסגר', done.length, '#3b6d11') + done.map(cardHtml).join('');
+  if (lost.length)   html += sectionHeader('לא נסגר', lost.length, '#a32d2d') + lost.map(cardHtml).join('');
+
+  document.getElementById('projects-list').innerHTML = html || '<div class="empty">אין פרויקטים להצגה</div>';
+}
+
+function renderClients() {
+  // Group projects by client
+  const grouped = {};
+  projects.forEach(p => {
+    const name = p['לקוח-שם'] || 'לא מוגדר';
+    if (!grouped[name]) grouped[name] = [];
+    grouped[name].push(p);
+  });
+  const entries = Object.entries(grouped).filter(([n])=>n!=='לא מוגדר').sort((a,b)=>b[1].length-a[1].length);
+  if (!entries.length) { document.getElementById('clients-content').innerHTML='<div class="empty">אין לקוחות</div>'; return; }
+  document.getElementById('clients-content').innerHTML = entries.map(([name, projs]) => {
+    const total = projs.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
+    const active = projs.filter(p=>p['סטטוס עסקי']==='בתהליך').length;
+    const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const cl = clients.find(x => x['שם משרד']===name)||{};
+    return `<div class="client-card" onclick="openClientModal('${name.replace(/'/g,"\\'")}')">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="client-avatar">${initials}</div>
+        <div class="client-info">
+          <div class="client-name">${name}</div>
+          <div class="client-meta">${projs.length} פרויקטים | ${active} פעילים | ${fmt(total)}</div>
+          ${cl['טלפון']?`<div style="font-size:11px;color:var(--text2);margin-top:2px">📞 ${cl['טלפון']}${cl['מייל']?' · '+cl['מייל']:''}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSuppliers() {
+  // Update project filter dropdown
+  const projSel = document.getElementById('sup-project');
+  if (projSel && projSel.options.length <= 1) {
+    const names = [...new Set(suppliers.flatMap(s => {
+      const ids = Array.isArray(s['פרויקט']) ? s['פרויקט'] : [];
+      return ids.map(id => { const p = projects.find(x=>normalizeId(x.id)===normalizeId(id)); return p?.['שם פרויקט']||''; });
+    }).filter(Boolean))].sort();
+    names.forEach(n => { const o = document.createElement('option'); o.value=n; o.textContent=n; projSel.appendChild(o); });
+  }
+
+  const sq = (document.getElementById('sup-search')?.value||'').toLowerCase();
+  const sp = document.getElementById('sup-project')?.value||'';
+  let list = suppliers.filter(s => {
+    if (sq && !(s['שם ספק']||'').toLowerCase().includes(sq)) return false;
+    if (sp) {
+      const ids = Array.isArray(s['פרויקט']) ? s['פרויקט'] : [];
+      const matched = ids.some(id => { const p = projects.find(x=>normalizeId(x.id)===normalizeId(id)); return p?.['שם פרויקט']===sp; });
+      if (!matched) return false;
+    }
+    return true;
+  });
+
+  if (!list.length) { document.getElementById('suppliers-list').innerHTML='<div class="empty">אין ספקים</div>'; return; }
+  document.getElementById('suppliers-list').innerHTML = list.map(s => {
+    const paid = s['תשלום התקבל'];
+    return `<div class="project-card" onclick="openSupplierModal('${s.id}')">
+      <div class="card-row">
+        <span class="card-title">${s['שם ספק']||'—'}</span>
+        <span class="card-amount">${fmt(s['סכום מכירה — רכישה'])}</span>
+      </div>
+      <div class="card-meta">
+        ${s['מודל']?`<span class="badge ${s['מודל']==='רכישה לאחר צילומים'?'badge-inprog':'badge-todo'}">${s['מודל']}</span>`:''}
+        ${s['חבילה']?`<span class="badge badge-default">${s['חבילה']}</span>`:''}
+        ${paid===true?`<span class="badge badge-done">שולם ✓</span>`:`<span class="badge badge-default">ממתין לתשלום</span>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateSupplierDatalist() {
+  // Get unique supplier names from loaded suppliers
+  const names = [...new Set(suppliers.map(s => s['שם ספק']).filter(Boolean))].sort();
+  // Update all datalists
+  document.querySelectorAll('#supplier-names-list').forEach(dl => {
+    dl.innerHTML = names.map(n => `<option value="${n}">`).join('');
+  });
+}
+
+let summaries = [];
+
+async function ensureSummariesDB() {
+  if (DB_SUMMARIES) return true;
+  showToast('יוצר DB סיכומים...');
+  try {
+    // Create the DB under CRM page
+    const res = await notionAPI('POST', '/databases', {
+      parent: { page_id: '341e323d0ee881399f4ff6448e9bf257' },
+      title: [{ type: 'text', text: { content: 'סיכומי פרויקט' } }],
+      properties: {
+        'שם פרויקט': { title: {} },
+        'לקוח': { rich_text: {} },
+        'סקטור': { select: { options: [
+          { name: 'פרטי', color: 'blue' },
+          { name: 'מבנה ציבור', color: 'green' },
+          { name: 'מבנה חינוך', color: 'orange' },
+          { name: 'מבנה תעשייה', color: 'purple' },
+          { name: 'מסחרי', color: 'yellow' }
+        ]}},
+        'קטגוריה': { rich_text: {} },
+        'תאריך צילום': { date: {} },
+        'פרויקט': { relation: { database_id: '462d1169d9814c3a806c843f53703942', single_property: {} } },
+        'סיור לוקיישן': { rich_text: {} },
+        'הערכות לצילומים': { rich_text: {} },
+        'צילומים': { rich_text: {} },
+        'עריכה': { rich_text: {} },
+        'סיכום': { rich_text: {} },
+      }
+    });
+    DB_SUMMARIES = res.id.replace(/-/g,'');
+    localStorage.setItem('crm_db_summaries', DB_SUMMARIES);
+    showToast('✓ DB סיכומים נוצר');
+    return true;
+  } catch(e) {
+    showToast('שגיאה ביצירת DB: ' + e.message);
+    return false;
+  }
+}
+
+async function loadSummaries() {
+  document.getElementById('summaries-list').innerHTML = '<div class="loading">טוען סיכומים...</div>';
+  const dbReady = await ensureSummariesDB();
+  if (!dbReady) return;
+  try {
+    const pages = await queryDB(DB_SUMMARIES, null,
+      [{ property: 'תאריך צילום', direction: 'descending' }]);
+    summaries = pages.map(page => {
+      const props = page.properties || {};
+      const gt = (p, type) => {
+        if (!p) return '';
+        if (type==='text') return (p.rich_text||[]).map(t=>t.plain_text).join('');
+        if (type==='select') return p.select?.name||'';
+        if (type==='date') return p.date?.start||'';
+        return '';
+      };
+      return {
+        id: page.id,
+        'שם פרויקט': (props['שם פרויקט']?.title||[]).map(t=>t.plain_text).join(''),
+        'לקוח': gt(props['לקוח'],'text'),
+        'תאריך צילום': gt(props['תאריך צילום'],'date'),
+        'סקטור': gt(props['סקטור'],'select'),
+        'קטגוריה': gt(props['קטגוריה'],'select'),
+        'סיור לוקיישן': gt(props['סיור לוקיישן'],'text'),
+        'הערכות לצילומים': gt(props['הערכות לצילומים'],'text'),
+        'צילומים': gt(props['צילומים'],'text'),
+        'עריכה': gt(props['עריכה'],'text'),
+        'סיכום': gt(props['סיכום'],'text'),
+      };
+    });
+    // Populate category filter
+    const cats = [...new Set(summaries.map(s=>s['קטגוריה']).filter(Boolean))].sort();
+    const catSel = document.getElementById('sum-category');
+    if (catSel) {
+      catSel.innerHTML = '<option value="">כל הקטגוריות</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    }
+    renderSummaries();
+  } catch(e) {
+    document.getElementById('summaries-list').innerHTML = '<div class="loading" style="color:var(--red)">שגיאה: ' + e.message + '</div>';
+  }
+}
+
+function renderSummaries() {
+  const sector = document.getElementById('sum-sector')?.value||'';
+  const category = document.getElementById('sum-category')?.value||'';
+  const from = document.getElementById('sum-from')?.value||'';
+  const to = document.getElementById('sum-to')?.value||'';
+
+  let list = summaries.filter(s => {
+    if (sector && s['סקטור'] !== sector) return false;
+    if (category && s['קטגוריה'] !== category) return false;
+    if (from && s['תאריך צילום'] < from) return false;
+    if (to && s['תאריך צילום'] > to) return false;
+    return true;
+  });
+
+  if (!list.length) {
+    document.getElementById('summaries-list').innerHTML = '<div class="empty">אין סיכומים תואמים</div>';
+    return;
+  }
+
+  document.getElementById('summaries-list').innerHTML = list.map(s => `
+    <div class="project-card" style="margin-bottom:12px">
+      <div class="card-row">
+        <div>
+          <span class="card-title">${s['שם פרויקט']||'—'}</span>
+          ${s['לקוח']?`<span style="font-size:12px;color:var(--text2);margin-right:8px">${s['לקוח']}</span>`:''}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${s['סקטור']?`<span class="badge badge-inprog">${s['סקטור']}</span>`:''}
+          ${s['קטגוריה']?`<span class="badge badge-default">${s['קטגוריה']}</span>`:''}
+          ${s['תאריך צילום']?`<span class="badge badge-default">📅 ${s['תאריך צילום']}</span>`:''}
+        </div>
+      </div>
+      ${[
+        ['סיור לוקיישן', s['סיור לוקיישן']],
+        ['הערכות לצילומים', s['הערכות לצילומים']],
+        ['צילומים', s['צילומים']],
+        ['עריכה', s['עריכה']],
+        ['סיכום', s['סיכום']],
+      ].filter(([,v])=>v).map(([k,v])=>`
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">${k}</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap">${v}</div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function renderCalendar() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const el = document.getElementById('calendar-content');
+  if (!el) return;
+
+  // Get current displayed month from state or default to today
+  const state = window._calState || { year, month };
+  window._calState = state;
+
+  const firstDay = new Date(state.year, state.month, 1);
+  const lastDay = new Date(state.year, state.month + 1, 0);
+  const startDow = (firstDay.getDay() + 1) % 7; // adjust for Sunday=0
+
+  const heMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  const heDays = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+
+  // Get projects this month
+  const monthStr = `${state.year}-${String(state.month+1).padStart(2,'0')}`;
+  const monthProjects = projects.filter(p => (p['date:מועד צילום:start']||'').startsWith(monthStr));
+
+  let html = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)">
+        <button class="btn btn-sm" onclick="window._calState={year:${state.month===0?state.year-1:state.year},month:${state.month===0?11:state.month-1}};renderCalendar()">‹</button>
+        <span style="font-size:16px;font-weight:600">${heMonths[state.month]} ${state.year}</span>
+        <button class="btn btn-sm" onclick="window._calState={year:${state.month===11?state.year+1:state.year},month:${state.month===11?0:state.month+1}};renderCalendar()">›</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)">
+        ${heDays.map(d=>`<div style="text-align:center;padding:8px;font-size:11px;font-weight:600;color:var(--text2)">${d}</div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr)">`;
+
+  let dayCount = 0;
+  // Empty cells before first day
+  for (let i = 0; i < startDow; i++) {
+    html += `<div style="min-height:70px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2)"></div>`;
+    dayCount++;
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dateStr = `${state.year}-${String(state.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayProjects = monthProjects.filter(p => p['date:מועד צילום:start'] === dateStr);
+    const isToday = dateStr === todayStr;
+
+    html += `<div style="min-height:70px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px;${isToday?'background:var(--blue-bg)':''}">
+      <div style="font-size:12px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--blue)':'var(--text2)'};margin-bottom:3px">${d}</div>
+      ${dayProjects.map(p=>`
+        <div onclick="openProject('${p.id}')" style="font-size:10px;font-weight:600;background:var(--accent);color:var(--surface);border-radius:3px;padding:2px 5px;margin-bottom:2px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="${p['שם פרויקט']||''}">${p['שם פרויקט']||'—'}</div>`).join('')}
+    </div>`;
+    dayCount++;
+  }
+
+  // Fill remaining cells
+  while (dayCount % 7 !== 0) {
+    html += `<div style="min-height:70px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2)"></div>`;
+    dayCount++;
+  }
+
+  html += `</div></div>`;
+
+  // Projects this month list
+  if (monthProjects.length) {
+    html += `<div class="section-title">${heMonths[state.month]} ${state.year} — ${monthProjects.length} צילומים</div>`;
+    html += monthProjects.sort((a,b)=>(a['date:מועד צילום:start']||'').localeCompare(b['date:מועד צילום:start']||'')).map(p=>`
+      <div class="project-card" onclick="openProject('${p.id}')">
+        <div class="card-row">
+          <div><span class="card-title">${p['שם פרויקט']||'—'}</span>${p['לקוח-שם']?`<span style="font-size:12px;color:var(--text2);margin-right:8px">${p['לקוח-שם']}</span>`:''}</div>
+          <span class="card-amount">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</span>
+        </div>
+        <div class="card-meta">
+          <span class="badge badge-default">📅 ${p['date:מועד צילום:start']}</span>
+          <span class="badge ${sbc(p['סטטוס'])}">${p['סטטוס']||''}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  el.innerHTML = html;
+}
+
+function renderFinance() {
+  const tP = projects.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
+  const pendingPayment = projects.filter(p=>p['סטטוס']==='ממתין לתשלום').reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
+  const tS = suppliers.reduce((s,p)=>s+(Number(p['סכום מכירה — רכישה'])||0),0);
+  const paid = suppliers.filter(s=>s['תשלום התקבל']===true).reduce((s,p)=>s+(Number(p['סכום מכירה — רכישה'])||0),0);
+  const pending = tS - paid;
+  const tFinal = projects.reduce((s,p)=>s+(Number(p['הכנסה סופית'])||Number(p['סכום הצעה'])||0),0);
+
+  // Monthly analysis — by shoot date
+  const monthlyData = {};
+  projects.forEach(p => {
+    const date = p['date:מועד צילום:start'];
+    if (!date || !p['סכום הצעה']) return;
+    const key = date.substring(0,7); // YYYY-MM
+    if (!monthlyData[key]) monthlyData[key] = 0;
+    monthlyData[key] += Number(p['סכום הצעה'])||0;
+  });
+  const months = Object.keys(monthlyData).sort();
+  const maxMonthly = Math.max(...Object.values(monthlyData), 1);
+
+  // Yearly analysis — by shoot date
+  const yearlyData = {};
+  projects.forEach(p => {
+    const date = p['date:מועד צילום:start'];
+    if (!date || !p['סכום הצעה']) return;
+    const year = date.substring(0,4);
+    if (!yearlyData[year]) yearlyData[year] = 0;
+    yearlyData[year] += Number(p['סכום הצעה'])||0;
+  });
+
+  // Client pie data
+  const clientData = {};
+  projects.forEach(p => {
+    if (!p['סכום הצעה']) return;
+    const name = p['לקוח-שם'] || 'לא מוגדר';
+    if (!clientData[name]) clientData[name] = 0;
+    clientData[name] += Number(p['סכום הצעה'])||0;
+  });
+  const clientEntries = Object.entries(clientData).sort((a,b)=>b[1]-a[1]);
+  const totalClient = clientEntries.reduce((s,[,v])=>s+v,0);
+  const pieColors = ['#1a1a1a','#4a7c59','#185fa5','#854f0b','#a32d2d','#6b3a8c','#2d7d7d','#7c4a1e'];
+
+  const hebrewMonths = {'01':'ינואר','02':'פברואר','03':'מרץ','04':'אפריל','05':'מאי','06':'יוני','07':'יולי','08':'אוגוסט','09':'ספטמבר','10':'אוקטובר','11':'נובמבר','12':'דצמבר'};
+
+  document.getElementById('finance-content').innerHTML = `
+    <div class="finance-grid">
+      <div class="finance-card"><div class="stat-label">סה"כ הצעות</div><div class="stat-value" style="font-size:16px">${fmt(tP)}</div></div>
+      <div class="finance-card"><div class="stat-label">הכנסה סופית (כולל ספקים)</div><div class="stat-value" style="font-size:16px">${fmt(tFinal)}</div></div>
+      <div class="finance-card"><div class="stat-label">הכנסות ספקים</div><div class="stat-value" style="font-size:16px">${fmt(tS)}</div></div>
+      <div class="finance-card"><div class="stat-label">ממתין לתשלום ספקים</div><div class="stat-value" style="font-size:16px;color:var(--orange)">${fmt(pending)}</div></div>
+      <div class="finance-card"><div class="stat-label">ממתין לתשלום לקוחות</div><div class="stat-value" style="font-size:16px;color:var(--orange)">${fmt(pendingPayment)}</div></div>
+    </div>
+
+    <div class="section-title">ניתוח חודשי</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px">
+      ${months.length === 0 ? '<div style="color:var(--text2);font-size:13px;text-align:center;padding:20px">אין נתונים</div>' :
+        months.map(m => {
+          const val = monthlyData[m];
+          const pct = Math.round((val/maxMonthly)*100);
+          const [yr, mo] = m.split('-');
+          return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="width:70px;font-size:12px;color:var(--text2);text-align:right;flex-shrink:0">${hebrewMonths[mo]} ${yr}</div>
+            <div style="flex:1;background:var(--surface2);border-radius:4px;height:20px;overflow:hidden">
+              <div style="width:${pct}%;background:var(--accent);height:100%;border-radius:4px;transition:width 0.3s"></div>
+            </div>
+            <div style="width:80px;font-size:12px;font-weight:600;text-align:left;flex-shrink:0">${fmt(val)}</div>
+          </div>`;
+        }).join('')}
+    </div>
+
+    <div class="section-title">ניתוח שנתי</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px">
+      ${Object.keys(yearlyData).length === 0 ? '<div style="color:var(--text2);font-size:13px;text-align:center;padding:20px">אין נתונים</div>' :
+        Object.entries(yearlyData).sort((a,b)=>b[0]-a[0]).map(([yr, val]) => {
+          const maxY = Math.max(...Object.values(yearlyData),1);
+          const pct = Math.round((val/maxY)*100);
+          return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="width:70px;font-size:13px;font-weight:600;text-align:right;flex-shrink:0">${yr}</div>
+            <div style="flex:1;background:var(--surface2);border-radius:4px;height:24px;overflow:hidden">
+              <div style="width:${pct}%;background:var(--accent);height:100%;border-radius:4px"></div>
+            </div>
+            <div style="width:90px;font-size:13px;font-weight:600;text-align:left;flex-shrink:0">${fmt(val)}</div>
+          </div>`;
+        }).join('')}
+    </div>
+
+    <div class="section-title">פילוח לפי לקוח</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+      ${clientEntries.length === 0 ? '<div style="color:var(--text2);font-size:13px">אין נתונים</div>' : `
+        <svg width="160" height="160" viewBox="0 0 160 160" style="flex-shrink:0">
+          ${(() => {
+            let startAngle = -Math.PI/2;
+            return clientEntries.slice(0,8).map(([name,val],i) => {
+              const angle = (val/totalClient)*2*Math.PI;
+              const endAngle = startAngle + angle;
+              const x1 = 80 + 70*Math.cos(startAngle);
+              const y1 = 80 + 70*Math.sin(startAngle);
+              const x2 = 80 + 70*Math.cos(endAngle);
+              const y2 = 80 + 70*Math.sin(endAngle);
+              const large = angle > Math.PI ? 1 : 0;
+              const d = `M80,80 L${x1},${y1} A70,70 0 ${large},1 ${x2},${y2} Z`;
+              const result = `<path d="${d}" fill="${pieColors[i%pieColors.length]}" stroke="var(--surface)" stroke-width="2"/>`;
+              startAngle = endAngle;
+              return result;
+            }).join('');
+          })()}
+          <circle cx="80" cy="80" r="32" fill="var(--surface)"/>
+          <text x="80" y="84" text-anchor="middle" font-size="11" fill="var(--text2)">${clientEntries.length} לקוחות</text>
+        </svg>
+        <div style="flex:1;min-width:150px">
+          ${clientEntries.slice(0,8).map(([name,val],i) => `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div style="width:12px;height:12px;border-radius:3px;background:${pieColors[i%pieColors.length]};flex-shrink:0"></div>
+              <div style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
+              <div style="font-size:12px;font-weight:600;flex-shrink:0">${Math.round((val/totalClient)*100)}%</div>
+            </div>`).join('')}
+        </div>`}
+    </div>`;
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────
+function switchTab(tab, el) {
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['projects','clients','suppliers','calendar','summaries','finance'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'':'none');
+  if (tab==='clients') { if (!projects.length) loadProjects().then(renderClients); else renderClients(); }
+  if (tab==='suppliers' && !suppliers.length) loadSuppliers();
+  if (tab==='calendar') renderCalendar();
+  if (tab==='summaries') loadSummaries();
+  if (tab==='finance') { if (!suppliers.length) loadSuppliers().then(renderFinance); else renderFinance(); }
+}
+
+// ─── Modals ───────────────────────────────────────────────────────────────
+function openModal(html) { document.getElementById('modal-container').innerHTML = html; }
+function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
+
+async function openProject(id) {
+  const p = projects.find(x=>x.id===id)||{};
+  // Load suppliers for this project
+  let projectSuppliers = [];
+  try {
+    const res = await notionAPI('POST', '/databases/' + DB_SUPPLIERS + '/query', {
+      filter: { property: 'פרויקט', relation: { contains: id } },
+      page_size: 50
+    });
+    projectSuppliers = (res.results || []).map(parseSupplier);
+  } catch(e) { console.warn('Could not load suppliers', e); }
+  // Pre-load supplier names for autocomplete if not loaded yet
+  if (!suppliers.length) await loadSuppliers();
+  setTimeout(() => {
+    updateSupplierDatalist();
+    // Init category dropdown with current project sector
+    if (p['סקטור']) updateCategoryOptions(p['סקטור'], 'cat-sel-' + id, p['קטגוריה']||'');
+  }, 100);
+
+  // Load existing summary
+  let existingSummary = null;
+  try {
+    const sr = await notionAPI('POST', '/databases/' + DB_SUMMARIES + '/query', {
+      filter: { property: 'פרויקט', relation: { contains: id } }, page_size: 1
+    });
+    existingSummary = sr.results?.[0] || null;
+  } catch(e) {}
+  const sm = existingSummary?.properties || {};
+  const getProp = (p, type) => {
+    if (!p) return '';
+    if (type==='text') return (p.rich_text||[]).map(t=>t.plain_text).join('');
+    if (type==='select') return p.select?.name||'';
+    return '';
+  };
+  const smSummaryId = existingSummary?.id || null;
+  const smFields = {
+    'סיור לוקיישן': getProp(sm['סיור לוקיישן'],'text'),
+    'הערכות לצילומים': getProp(sm['הערכות לצילומים'],'text'),
+    'צילומים': getProp(sm['צילומים'],'text'),
+    'עריכה': getProp(sm['עריכה'],'text'),
+    'סיכום': getProp(sm['סיכום'],'text'),
+    'סקטור': getProp(sm['סקטור'],'select') || p['סקטור'] || '',
+    'קטגוריה': getProp(sm['קטגוריה'],'text') || p['קטגוריה'] || '',
+  };
+
+  const suppliersHtml = projectSuppliers.length ? `
+    <div class="section-title">ספקים בפרויקט (${projectSuppliers.length})</div>
+    ${projectSuppliers.map(s => `
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:6px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="flex:1;cursor:pointer" onclick="openSupplierModal('${s.id}')">
+          <div style="font-size:13px;font-weight:600">${s['שם ספק']||'—'}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${s['מודל']||''} ${s['חבילה']?'· '+s['חבילה']:''} ${s['עלות ספק משתתף']?'· עלות: '+Number(s['עלות ספק משתתף']).toLocaleString('he-IL')+'₪':''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span style="font-size:13px;font-weight:600">${s['סכום מכירה — רכישה']?Number(s['סכום מכירה — רכישה']).toLocaleString('he-IL')+' ₪':'—'}</span>
+          <button class="btn btn-sm" onclick="editSupplierName('${s.id}')" style="padding:3px 8px;font-size:11px">ערוך</button>
+        </div>
+      </div>`).join('')}
+    <div class="section-title">הוסף ספק נוסף</div>` : `<div class="section-title">הוסף ספק לפרויקט</div>`;
+
+  openModal(`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">${p['שם פרויקט']||'פרויקט'}</span>
+          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <div class="label">סטטוס תפעולי</div>
+              <select onchange="updateProp('${id}','סטטוס',this.value)">
+                ${PIPELINE.map(s=>`<option ${p['סטטוס']===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </div>
+            <div class="detail-item">
+              <div class="label">סטטוס עסקי</div>
+              <select onchange="updateProp('${id}','סטטוס עסקי',this.value)">
+                ${['בתהליך','נסגר','לא נסגר'].map(s=>`<option ${p['סטטוס עסקי']===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </div>
+            <div class="detail-item">
+              <div class="label">סכום הצעה</div>
+              <input type="number" value="${p['סכום הצעה']!=null?p['סכום הצעה']:''}" placeholder="הזן סכום" onchange="updateNumber('${id}','סכום הצעה',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)">
+            </div>
+            <div class="detail-item"><div class="label">הכנסה סופית</div><div class="value" style="color:var(--green)">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</div></div>
+            <div class="detail-item"><div class="label">לקוח</div><div class="value">${p['לקוח-שם']||'—'}</div></div>
+            <div class="detail-item">
+            <div class="label">מועד צילום</div>
+            <input type="date" value="${p['date:מועד צילום:start']||''}" onchange="updateDate('${id}','מועד צילום',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-sans);background:var(--surface);color:var(--text)">
+          </div>
+            <div class="detail-item"><div class="label">סוג שירות</div><div class="value">${p['סוג שירות']||'—'}</div></div>
+          <div class="detail-item">
+            <div class="label">סקטור</div>
+            <select onchange="updateProjectSector('${id}',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)">
+              <option value="">בחר...</option>
+              ${SECTORS.map(s=>`<option value="${s}" ${p['סקטור']===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="detail-item">
+            <div class="label">קטגוריה</div>
+            <select id="cat-sel-${id}" onchange="updateText('${id}','קטגוריה',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)">
+              <option value="">בחר קטגוריה...</option>
+              ${p['סקטור'] ? (SECTOR_CATEGORIES[p['סקטור']]||['אחר']).map(cat=>`<option value="${cat}" ${p['קטגוריה']===cat?'selected':''}>${cat}</option>`).join('') : '<option value="" disabled>בחר סקטור תחילה...</option>'}
+            </select>
+          </div>
+            <div class="detail-item" style="grid-column:1/-1">
+            <div class="label">מיקום</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input id="loc-input-${id}" type="text" value="${p['מיקום']||''}" placeholder="עיר / כתובת" onchange="updateText('${id}','מיקום',this.value)" style="flex:1;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-sans);background:var(--surface);color:var(--text)">
+              <button class="btn btn-sm" onclick="openGoogleMaps('${id}')" title="פתח בגוגל מפות" style="flex-shrink:0;padding:6px 10px">🗺</button>
+            </div>
+          </div>
+          </div>
+          <div class="section-title">לוגיסטיקה</div>
+          <div class="checklist">
+            ${[
+              ['סיור לוקיישן','סיור לוקיישן'],
+              ['חוזה נחתם','חוזה נחתם'],
+              ['מקדמה שולמה','מקדמה שולמה'],
+              ['יתרה שולמה','יתרה שולמה'],
+              ['ממתין לתשלום','ממתין לתשלום'],
+              ['הסכם זכויות','הסכם זכויות'],
+              ['חשבונית הוצאה','חשבונית הוצאה'],
+            ].map(([k,l])=>`
+              <label class="check-row ${p[k]===true?'checked':''}">
+                <input type="checkbox" ${p[k]===true?'checked':''} onchange="updateCheck('${id}','${k}',this.checked)">
+                <span>${l}</span>
+              </label>`).join('')}
+          </div>
+          <div class="section-title">הערות</div>
+          <div class="field">
+            <textarea rows="3" placeholder="הערות פרויקט..." onchange="updateText('${id}','הערות',this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-sans);background:var(--surface);color:var(--text);resize:vertical;line-height:1.5">${p['הערות']||''}</textarea>
+          </div>
+          <div class="section-title">פולואפ</div>
+          <div class="row2">
+            <div class="field"><label>תאריך פולואפ</label>
+              <input type="date" value="${p['date:תאריך פולואפ:start']||''}" onchange="updateDate('${id}','תאריך פולואפ',this.value)">
+            </div>
+          </div>
+          ${suppliersHtml}
+          <div class="row2">
+            <div class="field"><label>שם ספק</label><input id="asn" type="text" placeholder="שם הספק" list="sup-datalist" autocomplete="off"><datalist id="sup-datalist"></datalist></div>
+            <div class="field"><label>מודל</label><select id="asm">
+              <option>רכישה לאחר צילומים</option><option>השתתפות בצילומים</option>
+            </select></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>חבילה</label>
+              <select id="aspk" onchange="autoPrice()">
+                <option value="">בחר...</option>${PKGS.map(p=>`<option>${p}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field"><label>סכום רכישה (₪)</label><input id="aspr" type="number" placeholder="0"></div>
+          </div>
+          <div class="row2">
+            <div class="field" id="aspart-row"><label>סכום תשלום ספק (₪)</label><input id="aspart" type="number" placeholder="0"></div>
+            <div class="field"><label>כמות תמונות</label><input id="asqt" type="number" placeholder="0"></div>
+          </div>
+          <button class="btn btn-sm" style="width:100%;margin-top:4px" onclick="addSupToProject('${id}')">+ הוסף ספק</button>
+        </div>
+        <div class="section-title">סיכום פרויקט</div>
+        <div class="row2">
+          <div class="field">
+            <label>סקטור</label>
+            <select id="sm-sector" onchange="updateCategoryOptions()" style="width:100%;padding:8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)">
+              <option value="">בחר סקטור...</option>
+              ${SECTORS.map(s=>`<option value="${s}" ${smFields['סקטור']===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>קטגוריה</label>
+            <select id="sm-category" style="width:100%;padding:8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)">
+              <option value="">בחר קטגוריה...</option>
+              ${smFields['סקטור'] ? (SECTOR_CATEGORIES[smFields['סקטור']]||[]).map(cat=>`<option value="${cat}" ${smFields['קטגוריה']===cat?'selected':''}>${cat}</option>`).join('') : ''}
+            </select>
+          </div>
+        </div>
+        ${['סיור לוקיישן','הערכות לצילומים','צילומים','עריכה','סיכום'].map(f=>`
+          <div class="field">
+            <label>${f}</label>
+            <textarea id="sm-${f}" rows="3" placeholder="${f}..." style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);resize:vertical;line-height:1.5">${smFields[f]||''}</textarea>
+          </div>`).join('')}
+        <button class="btn btn-primary" style="width:100%;margin-bottom:16px" onclick="saveProjectSummary('${id}','${p['שם פרויקט']||''}','${p['לקוח-שם']||''}','${p['date:מועד צילום:start']||''}',${JSON.stringify(smSummaryId)})">שמור סיכום</button>
+        <div class="modal-footer">
+          <button class="btn" style="color:var(--red);border-color:var(--red)" onclick="deleteProject('${id}')">מחק</button>
+          <button class="btn btn-primary" onclick="closeModal()">סגור</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function toggleSupplierFields() {
+  const model = document.getElementById('asm')?.value;
+  const isPurchase = model !== 'השתתפות בצילומים';
+  const pf = document.getElementById('purchase-fields');
+  const ptf = document.getElementById('participant-fields');
+  if (pf) pf.style.display = isPurchase ? '' : 'none';
+  if (ptf) ptf.style.display = isPurchase ? 'none' : '';
+}
+
+function autoPrice() {
+  const pkg = document.getElementById('aspk')?.value;
+  const pr = PKG_PRICES[pkg];
+  if (pr) document.getElementById('aspr').value = pr;
+}
+
+function openClientModal(name) {
+  const projs = projects.filter(p=>p['לקוח-שם']===name);
+  const total = projs.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
+  openModal(`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">${name}</span>
+          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          ${(() => { const cl = clients.find(x=>x['שם משרד']===name)||{}; return cl['טלפון']||cl['מייל']||cl['איש קשר'] ? `
+          <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;gap:16px;flex-wrap:wrap">
+            ${cl['איש קשר']?`<span>👤 ${cl['איש קשר']}</span>`:''}
+            ${cl['טלפון']?`<a href="tel:${cl['טלפון']}" style="color:var(--text);text-decoration:none">📞 ${cl['טלפון']}</a>`:''}
+            ${cl['מייל']?`<a href="mailto:${cl['מייל']}" style="color:var(--text);text-decoration:none">✉ ${cl['מייל']}</a>`:''}
+          </div>` : ''; })()}
+          <div class="detail-grid">
+            <div class="detail-item"><div class="label">פרויקטים</div><div class="value">${projs.length}</div></div>
+            <div class="detail-item"><div class="label">שווי כולל</div><div class="value">${fmt(total)}</div></div>
+            <div class="detail-item"><div class="label">פעילים</div><div class="value">${projs.filter(p=>p['סטטוס עסקי']==='בתהליך').length}</div></div>
+            <div class="detail-item"><div class="label">נסגרו</div><div class="value">${projs.filter(p=>p['סטטוס עסקי']==='נסגר').length}</div></div>
+          </div>
+          <div class="section-title">כל הפרויקטים</div>
+          ${projs.map(p=>`
+            <div class="pitem">
+              <span class="pitem-title" onclick="closeModal();openProject('${p.id}')" style="cursor:pointer;flex:1">${p['שם פרויקט']||'—'}</span>
+              <div class="pitem-right">
+                <span class="badge ${sbc(p['סטטוס'])}" style="font-size:10px">${p['סטטוס']||''}</span>
+                <span style="font-size:13px;font-weight:600">${fmt(p['סכום הצעה'])}</span>
+                <button class="btn btn-sm" style="color:var(--red);border-color:var(--red);padding:3px 8px" onclick="deleteProject('${p.id}')">מחק</button>
+              </div>
+            </div>`).join('')}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="closeModal();openNewProject()">+ פרויקט חדש</button>
+          <button class="btn" onclick="closeModal()">סגור</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function openSupplierModal(id) {
+  const s = suppliers.find(x=>x.id===id)||{};
+  openModal(`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">${s['שם ספק']||'ספק'}</span>
+          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="section-title">פרטי ספק</div>
+          <div class="row2">
+            <div class="f"><label>שם ספק</label><input id="se-name" type="text" value="${s['שם ספק']||''}"></div>
+            <div class="f"><label>תפקיד</label><input id="se-role" type="text" value="${s['תפקיד']||''}"></div>
+          </div>
+          <div class="row2">
+            <div class="f"><label>איש קשר</label><input id="se-contact" type="text" value="${s['איש קשר']||''}"></div>
+            <div class="f"><label>טלפון</label><input id="se-phone" type="tel" value="${s['טלפון']||''}"></div>
+          </div>
+          <div class="f"><label>מייל</label><input id="se-email" type="email" value="${s['מייל']||''}"></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="saveSupplierDetails('${id}')">שמור פרטים</button>
+
+          <div class="section-title" style="margin-top:16px">פרטי עסקה</div>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <div class="label">מודל</div>
+              <select onchange="updateSupProp('${id}','מודל','select',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)">
+                <option ${s['מודל']==='רכישה לאחר צילומים'?'selected':''}>רכישה לאחר צילומים</option>
+                <option ${s['מודל']==='השתתפות בצילומים'?'selected':''}>השתתפות בצילומים</option>
+              </select>
+            </div>
+            <div class="detail-item">
+              <div class="label">חבילה</div>
+              <select onchange="updateSupProp('${id}','חבילה','select',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)">
+                <option value="">ללא</option>
+                ${PKGS.map(p=>`<option ${s['חבילה']===p?'selected':''}>${p}</option>`).join('')}
+              </select>
+            </div>
+            <div class="detail-item">
+              <div class="label">כמות תמונות</div>
+              <input type="number" value="${s['כמות תמונות']||''}" placeholder="0" onchange="updateSupProp('${id}','כמות תמונות','number',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)">
+            </div>
+            <div class="detail-item">
+              <div class="label">סכום מכירה (₪)</div>
+              <input type="number" value="${s['סכום מכירה — רכישה']||''}" placeholder="0" onchange="updateSupProp('${id}','סכום מכירה — רכישה','number',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)">
+            </div>
+          </div>
+
+          <div class="section-title">סטטוס מכירה</div>
+          <div class="checklist">
+            ${[
+              ['קישור חותמת מים נשלח','קישור חותמת מים נשלח'],
+              ['חשבון עסקה נשלח','חשבון עסקה נשלח'],
+              ['חוזה / הסכם זכויות','הסכם זכויות חתום'],
+              ['תשלום התקבל','תשלום התקבל'],
+              ['קישור הורדה נשלח','קישור הורדה נשלח'],
+            ].map(([k,l])=>`
+              <label class="check-row ${s[k]===true?'checked':''}">
+                <input type="checkbox" ${s[k]===true?'checked':''} onchange="updateSupCheck('${id}','${k}',this.checked)">
+                <span>${l}</span>
+              </label>`).join('')}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" style="color:var(--red);border-color:var(--red)" onclick="deleteSupplier('${id}')">מחק</button>
+          <button class="btn" onclick="closeModal()">סגור</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function editSupplierName(id) {
+  const s = suppliers.find(x=>x.id===id)||{};
+  const newName = prompt('שם ספק:', s['שם ספק']||'');
+  if (newName === null) return; // cancelled
+  if (!newName.trim()) { alert('נא למלא שם'); return; }
+  notionAPI('PATCH', '/pages/' + id, {
+    properties: { 'שם ספק': { title: [{ text: { content: newName.trim() } }] } }
+  }).then(() => {
+    if (s) s['שם ספק'] = newName.trim();
+    showToast('✓ שם עודכן');
+    renderSuppliers();
+  }).catch(e => showToast('שגיאה: ' + e.message));
+}
+
+async function updateSupProp(id, field, type, value) {
+  const props = {};
+  if (type === 'select') props[field] = value ? { select: { name: value } } : { select: null };
+  else if (type === 'number') props[field] = { number: value ? Number(value) : null };
+  else props[field] = { rich_text: [{ text: { content: value } }] };
+  try {
+    await notionAPI('PATCH', '/pages/' + id, { properties: props });
+    const s = suppliers.find(x=>x.id===id);
+    if (s) s[field] = type === 'number' ? (value ? Number(value) : null) : value;
+    showToast('✓ עודכן');
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+async function saveSupplierDetails(id) {
+  const name = document.getElementById('se-name')?.value.trim();
+  const role = document.getElementById('se-role')?.value.trim();
+  const contact = document.getElementById('se-contact')?.value.trim();
+  const phone = document.getElementById('se-phone')?.value.trim();
+  const email = document.getElementById('se-email')?.value.trim();
+  const props = {};
+  if (name) props['שם ספק'] = { title: [{ text: { content: name } }] };
+  if (role !== undefined) props['תפקיד'] = { rich_text: [{ text: { content: role } }] };
+  if (contact !== undefined) props['איש קשר'] = { rich_text: [{ text: { content: contact } }] };
+  if (phone !== undefined) props['טלפון'] = { phone_number: phone || null };
+  if (email !== undefined) props['מייל'] = { email: email || null };
+  try {
+    await notionAPI('PATCH', '/pages/' + id, { properties: props });
+    const s = suppliers.find(x=>x.id===id);
+    if (s) { s['שם ספק']=name||s['שם ספק']; s['תפקיד']=role; s['איש קשר']=contact; s['טלפון']=phone; s['מייל']=email; }
+    showToast('✓ פרטי ספק עודכנו');
+    renderSuppliers();
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+function openFollowups() {
+  const today = new Date().toISOString().split('T')[0];
+  const due = projects.filter(p=>p['date:תאריך פולואפ:start']&&p['date:תאריך פולואפ:start']<=today);
+  openModal(`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">פולואפים דחופים (${due.length})</span>
+          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          ${due.length===0?'<div class="empty">אין פולואפים דחופים 🎉</div>':
+            due.map(p=>`
+              <div class="pitem" onclick="closeModal();openProject('${p.id}')">
+                <span class="pitem-title">${p['שם פרויקט']||'—'}</span>
+                <div class="pitem-right">
+                  <span class="badge badge-red">${p['date:תאריך פולואפ:start']}</span>
+                  <span style="font-size:13px;font-weight:600">${fmt(p['סכום הצעה'])}</span>
+                </div>
+              </div>`).join('')}
+        </div>
+        <div class="modal-footer"><button class="btn" onclick="closeModal()">סגור</button></div>
+      </div>
+    </div>`);
+}
+
+function openNewProject() {
+  newSuppliers = [];
+  const todayStr = new Date().toISOString().split('T')[0];
+  if (!suppliers.length) loadSuppliers().then(updateSupplierDatalist);
+  else updateSupplierDatalist();
+  openModal(`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">פרויקט חדש</span>
+          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="section-title">פרטי הפרויקט</div>
+          <div class="field"><label>שם פרויקט *</label><input id="nn" type="text" placeholder="שם הפרויקט" autofocus></div>
+          <div class="row2">
+            <div class="field"><label>לקוח / משרד</label><input id="nc" type="text" placeholder="שם המשרד"></div>
+            <div class="field"><label>מקור פנייה</label><select id="nso">
+              <option value="">בחר...</option>
+              <option>פנייה ישירה</option><option>המלצה</option><option>לקוח חוזר</option><option>וואטסאפ</option><option>אחר</option>
+            </select></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>סוג שירות</label><select id="nsr">
+              <option value="">בחר...</option>
+              <option>צילום</option><option>וידאו</option><option>צילום + וידאו</option>
+            </select></div>
+            <div class="field"><label>היקף</label><select id="nsc">
+              <option value="">בחר...</option>
+              <option>פנים</option><option>חוץ</option><option>פנים + חוץ</option>
+            </select></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>סקטור</label>
+              <select id="nsect" onchange="updateCategoryOptions(this.value,'ncat')">
+                <option value="">בחר סקטור...</option>
+                ${SECTORS.map(s=>`<option value="${s}">${s}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field"><label>קטגוריה ספציפית</label>
+              <select id="ncat" onchange="">
+                <option value="">בחר קטגוריה...</option>
+              </select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>סכום הצעה (₪)</label><input id="npr" type="number" placeholder="0"></div>
+            <div class="field"><label>מועד צילום</label><input id="ndt" type="date"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>מיקום</label><input id="nlc" type="text" placeholder="עיר / כתובת"></div>
+            <div class="field"><label>תאריך פולואפ</label><input id="nfu" type="date"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>סטטוס תפעולי</label>
+              <select id="nstatus">
+                <option value="שיחה נכנסת">שיחה נכנסת</option>
+                <option value="הצעה נשלחה">הצעה נשלחה</option>
+                <option value="ממתין לאישור">ממתין לאישור</option>
+                <option value="מאושר - בתיאום">מאושר — בתיאום</option>
+                <option value="סיור לוקיישן">סיור לוקיישן</option>
+                <option value="ממתין ליום צילום">ממתין ליום צילום</option>
+                <option value="יום צילום">יום צילום</option>
+                <option value="ממתין לעריכה">ממתין לעריכה</option>
+                <option value="נמסר ללקוח">נמסר ללקוח</option>
+                <option value="מכירת ספקים">מכירת ספקים</option>
+                <option value="ממתין לתשלום">ממתין לתשלום</option>
+                <option value="Done">Done</option>
+              </select>
+            </div>
+            <div class="field"><label>סטטוס עסקי</label>
+              <select id="nbiz">
+                <option value="בתהליך">בתהליך</option>
+                <option value="נסגר">נסגר</option>
+                <option value="לא נסגר">לא נסגר</option>
+              </select>
+            </div>
+          </div>
+          <div class="field"><label>הערות שיחה ראשונה</label><textarea id="nnt" placeholder="מה עלה בשיחה..."></textarea></div>
+          <div class="field"><label>תאריך הזנה למערכת</label><input id="nentry" type="date" value="${todayStr}"></div>
+          <hr class="divider">
+          <div class="section-title">ספקים משתתפים</div>
+          <div id="sup-rows"></div>
+          <button class="add-sup-btn" onclick="addSupRow()">+ הוסף ספק</button>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal()">ביטול</button>
+          <button class="btn btn-primary" onclick="saveProject()">שמור פרויקט</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function addSupRow() {
+  newSuppliers.push({name:'',model:'רכישה לאחר צילומים',pkg:'',price:'',qty:''});
+  renderSupRows();
+}
+function removeSupRow(i) { newSuppliers.splice(i,1); renderSupRows(); }
+function updateSup(i,k,v) { newSuppliers[i][k]=v; }
+function autoSupPrice(i,pkg) { const pr=PKG_PRICES[pkg]; if(pr){newSuppliers[i].price=pr; const el=document.getElementById('sp-'+i); if(el)el.value=pr;} }
+
+function renderSupRows() {
+  const c = document.getElementById('sup-rows');
+  if (!c) return;
+  c.innerHTML = newSuppliers.map((s,i)=>`
+    <div class="supplier-row">
+      <div class="supplier-row-header">
+        <span class="supplier-row-title">${s.name||'ספק '+(i+1)}</span>
+        <button class="btn btn-sm btn-ghost" onclick="removeSupRow(${i})">הסר</button>
+      </div>
+      <div class="row2">
+        <div class="field"><label>שם ספק</label><input type="text" value="${s.name}" onchange="updateSup(${i},'name',this.value)" placeholder="שם הספק" list="sup-datalist" autocomplete="off"></div>
+        <div class="field"><label>מודל</label><select onchange="updateSup(${i},'model',this.value)">
+          <option ${s.model==='רכישה לאחר צילומים'?'selected':''}>רכישה לאחר צילומים</option>
+          <option ${s.model==='השתתפות בצילומים'?'selected':''}>השתתפות בצילומים</option>
+        </select></div>
+      </div>
+      ${s.model === 'השתתפות בצילומים' ? `
+        <div class="field"><label>סכום השתתפות (₪)</label><input type="number" value="${s.participantCost||''}" onchange="updateSup(${i},'participantCost',this.value)" placeholder="כמה הספק משלם..."></div>
+      ` : `
+        <div class="row2">
+          <div class="field"><label>חבילה</label><select onchange="updateSup(${i},'pkg',this.value);autoSupPrice(${i},this.value)">
+            <option value="">בחר...</option>${PKGS.map(p=>`<option ${s.pkg===p?'selected':''}>${p}</option>`).join('')}
+          </select></div>
+          <div class="field"><label>סכום רכישה (₪)</label><input id="sp-${i}" type="number" value="${s.price||''}" onchange="updateSup(${i},'price',this.value)" placeholder="0"></div>
+        </div>
+        <div class="field"><label>כמות תמונות</label><input type="number" value="${s.qty||''}" onchange="updateSup(${i},'qty',this.value)" placeholder="0" style="width:50%"></div>
+      `}
+    </div>`).join('');
+}
+
+// ─── Notion writes ────────────────────────────────────────────────────────
+// Find or create a client by name, return page ID
+async function findOrCreateClient(clientName) {
+  if (!clientName) return null;
+  const res = await notionAPI('POST', '/databases/' + DB_CLIENTS + '/query', { page_size: 100 });
+  const pages = res.results || [];
+  for (const page of pages) {
+    const props = page.properties || {};
+    for (const prop of Object.values(props)) {
+      if (prop.type === 'title') {
+        const title = (prop.title || []).map(t => t.plain_text).join('').trim();
+        if (title.toLowerCase() === clientName.toLowerCase()) {
+          clientNames[page.id] = title;
+          return page.id;
+        }
+      }
+    }
+  }
+  const newClient = await notionAPI('POST', '/pages', {
+    parent: { database_id: DB_CLIENTS },
+    properties: { 'שם משרד': { title: [{ text: { content: clientName } }] } }
+  });
+  clientNames[newClient.id] = clientName;
+  return newClient.id;
+}
+
+async function saveProject() {
+  const name = document.getElementById('nn')?.value.trim();
+  if (!name) { alert('נא למלא שם פרויקט'); return; }
+  const price = document.getElementById('npr')?.value;
+  const shootDate = document.getElementById('ndt')?.value;
+  const followup = document.getElementById('nfu')?.value;
+  const clientInput = document.getElementById('nc')?.value.trim();
+
+  const selectedStatus = document.getElementById('nstatus')?.value || 'שיחה נכנסת';
+  const selectedBiz = document.getElementById('nbiz')?.value || 'בתהליך';
+  const props = {
+    'שם פרויקט': { title: [{ text: { content: name } }] },
+    'סטטוס': { status: { name: selectedStatus } },
+    'סטטוס עסקי': { select: { name: selectedBiz } },
+  };
+  const src = document.getElementById('nso')?.value; if(src) props['מקור פנייה'] = { select: { name: src } };
+  const srv = document.getElementById('nsr')?.value; if(srv) props['סוג שירות'] = { select: { name: srv } };
+  const scp = document.getElementById('nsc')?.value; if(scp) props['היקף'] = { select: { name: scp } };
+  const sect = document.getElementById('nsect')?.value; if(sect) props['סקטור'] = { select: { name: sect } };
+  const cat = document.getElementById('ncat')?.value?.trim(); if(cat) props['קטגוריה'] = { rich_text: [{ text: { content: cat } }] };
+  if (price) props['סכום הצעה'] = { number: Number(price) };
+  if (shootDate) props['מועד צילום'] = { date: { start: shootDate } };
+  if (followup) props['תאריך פולואפ'] = { date: { start: followup } };
+  const loc = document.getElementById('nlc')?.value; if(loc) props['מיקום'] = { rich_text: [{ text: { content: loc } }] };
+  const notes = document.getElementById('nnt')?.value; if(notes) props['הערות שיחה ראשונה'] = { rich_text: [{ text: { content: notes } }] };
+
+  // Entry date - default today
+  const entryInput = document.getElementById('nentry')?.value;
+  const entryDate = entryInput || new Date().toISOString().split('T')[0];
+  props['תאריך הזנה'] = { date: { start: entryDate } };
+
+  const sups = [...newSuppliers].filter(s=>s.name.trim());
+  closeModal();
+  showToast('שומר פרויקט...');
+
+  try {
+    if (clientInput) {
+      const clientId = await findOrCreateClient(clientInput);
+      if (clientId) props['לקוח'] = { relation: [{ id: clientId }] };
+    }
+  } catch(e) { console.warn('Client link failed:', e.message); }
+
+  try {
+    const res = await notionAPI('POST', '/pages', {
+      parent: { database_id: DB_PROJECTS },
+      properties: props
+    });
+    const newId = res.id;
+
+    // Save suppliers
+    for (const s of sups) {
+      const sp = {
+        'שם ספק': { title: [{ text: { content: s.name } }] },
+        'מודל': { select: { name: s.model } },
+        'פרויקט': { relation: [{ id: newId }] }
+      };
+      if (s.pkg) sp['חבילה'] = { select: { name: s.pkg } };
+      if (s.qty) sp['כמות תמונות'] = { number: Number(s.qty) };
+      if (s.price) sp['סכום מכירה — רכישה'] = { number: Number(s.price) };
+      if (s.partCost) sp['עלות ספק משתתף'] = { number: Number(s.partCost) };
+      await notionAPI('POST', '/pages', { parent: { database_id: DB_SUPPLIERS }, properties: sp });
+    }
+
+    showToast('✓ הפרויקט נשמר בהצלחה');
+    await loadProjects();
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+async function updateProp(id, field, value) {
+  const props = {};
+  if (field === 'סטטוס') props[field] = { status: { name: value } };
+  else if (field === 'סטטוס עסקי') props[field] = { select: { name: value } };
+  else props[field] = { select: { name: value } };
+  try {
+    await notionAPI('PATCH', '/pages/' + id, { properties: props });
+    const p = projects.find(x=>x.id===id);
+    if (p) p[field] = value;
+    renderProjects(); renderStats();
+    showToast('✓ עודכן');
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+function updateCategoryOptions() {
+  const sector = document.getElementById('sm-sector')?.value;
+  const catSel = document.getElementById('sm-category');
+  if (!catSel) return;
+  const cats = SECTOR_CATEGORIES[sector] || [];
+  catSel.innerHTML = '<option value="">בחר קטגוריה...</option>' +
+    cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function updateCategoryOptions(sector, targetId, currentVal) {
+  const sel = document.getElementById(targetId);
+  if (!sel) return;
+  if (!sector) {
+    sel.innerHTML = '<option value="">— בחר סקטור תחילה —</option>';
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+  const cats = SECTOR_CATEGORIES[sector] || ['אחר'];
+  sel.innerHTML = '<option value="">בחר קטגוריה...</option>' +
+    cats.map(cat=>`<option value="${cat}" ${currentVal===cat?'selected':''}>${cat}</option>`).join('');
+}
+
+function openGoogleMaps(id) {
+  const input = document.getElementById('loc-input-' + id);
+  const val = input?.value || projects.find(x=>x.id===id)?.['מיקום'] || '';
+  if (val.trim()) {
+    window.open('https://www.google.com/maps/search/' + encodeURIComponent(val), '_blank');
+  } else {
+    window.open('https://www.google.com/maps', '_blank');
+  }
+}
+
+async function updateNumber(id, field, value) {
+  try {
+    await notionAPI('PATCH', '/pages/' + id, { properties: { [field]: { number: value ? Number(value) : null } } });
+    const p = projects.find(x=>x.id===id);
+    if (p) p[field] = value ? Number(value) : null;
+    renderProjects(); renderStats();
+    showToast('✓ עודכן');
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+async function updateProjectSector(id, sector) {
+  try {
+    await notionAPI('PATCH', '/pages/' + id, { properties: { 'סקטור': sector ? { select: { name: sector } } : { select: null } } });
+    const p = projects.find(x=>x.id===id);
+    if (p) p['סקטור'] = sector;
+    showToast('✓ סקטור עודכן');
+    // Update category dropdown
+    updateCategoryOptions(sector, 'cat-sel-' + id, p?.['קטגוריה']||'');
+    // Sync to summary sector dropdown
+    const smSector = document.getElementById('sm-sector');
+    if (smSector) {
+      smSector.value = sector;
+    }
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+async function updateText(id, field, value) {
+  try {
+    await notionAPI('PATCH', '/pages/' + id, { properties: { [field]: { rich_text: [{ text: { content: value } }] } } });
+    const p = projects.find(x=>x.id===id);
+    if (p) p[field] = value;
+    showToast('✓ עודכן');
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+async function updateCheck(id, field, checked) {
+  try {
+    await notionAPI('PATCH', '/pages/' + id, { properties: { [field]: { checkbox: checked } } });
+    const p = projects.find(x=>x.id===id);
+    if (p) p[field] = checked;
+    showToast('✓ עודכן');
+  } catch(e) { showToast('שגיאה'); }
+}
+
+async function updateDate(id, field, value) {
+  try {
+    await notionAPI('PATCH', '/pages/' + id, { properties: { [field]: value ? { date: { start: value } } : { date: null } } });
+    const p = projects.find(x=>x.id===id);
+    if (p) p['date:'+field+':start'] = value;
+    renderProjects(); renderStats();
+    showToast('✓ עודכן');
+  } catch(e) { showToast('שגיאה'); }
+}
+
+async function updateSupCheck(id, field, checked) {
+  try {
+    await notionAPI('PATCH', '/pages/' + id, { properties: { [field]: { checkbox: checked } } });
+    const s = suppliers.find(x=>x.id===id);
+    if (s) s[field] = checked;
+    showToast('✓ עודכן');
+  } catch(e) { showToast('שגיאה'); }
+}
+
+async function addSupToProject(projectId) {
+  const name = document.getElementById('asn')?.value.trim();
+  if (!name) { alert('נא למלא שם ספק'); return; }
+  const model = document.getElementById('asm')?.value;
+  const pkg = document.getElementById('aspk')?.value;
+  const price = document.getElementById('aspr')?.value;
+  const qty = document.getElementById('asqt')?.value;
+  const partCost = document.getElementById('aspart')?.value;
+  const props = {
+    'שם ספק': { title: [{ text: { content: name } }] },
+    'מודל': { select: { name: model } },
+    'פרויקט': { relation: [{ id: projectId }] }
+  };
+  if (pkg) props['חבילה'] = { select: { name: pkg } };
+  if (qty) props['כמות תמונות'] = { number: Number(qty) };
+  if (price) props['סכום מכירה — רכישה'] = { number: Number(price) };
+  if (partCost) props['עלות ספק משתתף'] = { number: Number(partCost) };
+  showToast('מוסיף ספק...');
+  try {
+    await notionAPI('POST', '/pages', { parent: { database_id: DB_SUPPLIERS }, properties: props });
+    showToast('✓ ספק נוסף');
+    // Reload suppliers and reopen project
+    await loadSuppliers();
+    await openProject(projectId);
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────
+function saveToken() {
+  const t = document.getElementById('token-input')?.value.trim();
+  if (!t || (!t.startsWith('secret_') && !t.startsWith('ntn_'))) { alert('טוקן לא תקין — חייב להתחיל ב-secret_ או ntn_'); return; }
+  localStorage.setItem('notion_token', t);
+  token = t;
+  startApp();
+}
+
+function logout() {
+  if (confirm('להתנתק?')) {
+    sessionStorage.removeItem('crm_authed');
+    location.reload();
+  }
+}
+
+function changePassword() {
+  const old = prompt('סיסמה נוכחית:');
+  if (!old || hashString(old) !== localStorage.getItem('crm_pass_hash')) { alert('סיסמה שגויה'); return; }
+  const newp = prompt('סיסמה חדשה (לפחות 4 תווים):');
+  if (!newp || newp.length < 4) { alert('סיסמה קצרה מדי'); return; }
+  localStorage.setItem('crm_pass_hash', hashString(newp));
+  alert('✓ הסיסמה שונתה');
+}
+
+function startApp() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  loadProjects();
+}
+
+// ─── Delete ───────────────────────────────────────────────────────────────
+async function deletePage(id, name, onSuccess) {
+  if (!confirm('למחוק את "' + name + '"?\n\nהפעולה תעביר לפח ב-Notion ולא תמחק לצמיתות.')) return;
+  try {
+    await notionAPI('PATCH', '/pages/' + id, { archived: true });
+    showToast('✓ הועבר לפח');
+    closeModal();
+    if (onSuccess) onSuccess();
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+async function saveProjectSummary(projectId, projectName, clientName, shootDate, existingId) {
+  const p = projects.find(x=>x.id===projectId)||{};
+  const sector = document.getElementById('sm-sector')?.value || p['סקטור'] || '';
+  const props = {
+    'שם פרויקט': { title: [{ text: { content: projectName } }] },
+    'לקוח': { rich_text: [{ text: { content: clientName } }] },
+  };
+  // Add project relation only if it exists in DB
+  try { props['פרויקט'] = { relation: [{ id: projectId }] }; } catch(e) {}
+  if (sector) props['סקטור'] = { select: { name: sector } };
+  if (shootDate) props['תאריך צילום'] = { date: { start: shootDate } };
+  const fields = ['סיור לוקיישן','הערכות לצילומים','צילומים','עריכה','סיכום'];
+  fields.forEach(f => {
+    const val = document.getElementById('sm-' + f)?.value || '';
+    props[f] = { rich_text: [{ text: { content: val } }] };
+  });
+  showToast('שומר סיכום...');
+  const dbReady = await ensureSummariesDB();
+  if (!dbReady) return;
+  try {
+    if (existingId) {
+      await notionAPI('PATCH', '/pages/' + existingId, { properties: props });
+    } else {
+      await notionAPI('POST', '/pages', { parent: { database_id: DB_SUMMARIES }, properties: props });
+    }
+    showToast('✓ סיכום נשמר');
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+function deleteProject(id) {
+  const p = projects.find(x=>x.id===id)||{};
+  deletePage(id, p['שם פרויקט']||'פרויקט', () => { loadProjects(); });
+}
+
+function deleteSupplier(id) {
+  const s = suppliers.find(x=>x.id===id)||{};
+  deletePage(id, s['שם ספק']||'ספק', () => { loadSuppliers(); });
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+// ─── Password ────────────────────────────────────────────────────────────
+// Password is hashed — change PASS_HASH to set a new password
+// Current password: set on first run
+const PASS_HASH = localStorage.getItem('crm_pass_hash') || '';
+
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash.toString(36);
+}
+
+function checkPassword() {
+  const input = document.getElementById('pwd-input')?.value;
+  const stored = localStorage.getItem('crm_pass_hash');
+  if (!stored) {
+    // First time — set password
+    if (!input || input.length < 4) { 
+      document.getElementById('pwd-error').textContent = 'סיסמה חייבת להיות לפחות 4 תווים';
+      document.getElementById('pwd-error').style.display = 'block';
+      return; 
+    }
+    localStorage.setItem('crm_pass_hash', hashString(input));
+    document.getElementById('pwd-error').style.display = 'none';
+    afterPasswordOk();
+    return;
+  }
+  if (hashString(input) === stored) {
+    document.getElementById('pwd-error').style.display = 'none';
+    afterPasswordOk();
+  } else {
+    document.getElementById('pwd-error').textContent = 'סיסמה שגויה';
+    document.getElementById('pwd-error').style.display = 'block';
+    document.getElementById('pwd-input').value = '';
+  }
+}
+
+function afterPasswordOk() {
+  sessionStorage.setItem('crm_authed', '1');
+  document.getElementById('password-screen').style.display = 'none';
+  token = localStorage.getItem('notion_token') || '';
+  if (token) {
+    startApp();
+  } else {
+    document.getElementById('setup-screen').style.display = 'block';
+  }
+}
+
+// Init
+token = localStorage.getItem('notion_token') || '';
+const passOk = localStorage.getItem('crm_pass_hash') && 
+               sessionStorage.getItem('crm_authed') === '1';
+
+if (passOk) {
+  if (token) startApp();
+  else document.getElementById('setup-screen').style.display = 'block';
+} else {
+  const screen = document.getElementById('password-screen');
+  screen.style.display = 'block';
+  if (!localStorage.getItem('crm_pass_hash')) {
+    document.querySelector('#password-screen .setup-subtitle').textContent = 
+      'כניסה ראשונה — בחר סיסמה שתשמש לכל הכניסות הבאות.';
+  }
+}
+
+// Auto-refresh every 60 seconds
+setInterval(() => {
+  if (token && !document.getElementById('modal-container').innerHTML) {
+    loadProjects();
+  }
+}, 60000);
+</script>
+</body>
+</html>
