@@ -444,7 +444,11 @@ async function loadProjects() {
     projects.forEach(p => {
       if (Array.isArray(p['לקוח']) && p['לקוח'].length) {
         const cid = normalizeId(p['לקוח'][0]);
-        p['לקוח-שם'] = clientNames[cid] || clientNames[p['לקוח'][0]] || '';
+        const allNames = p['לקוח'].map(id => {
+          const nid = normalizeId(id);
+          return clientNames[nid] || clientNames[id] || '';
+        }).filter(Boolean);
+        p['לקוח-שם'] = allNames.join(' + ');
       }
       p['ספקים-משתתפים'] = [];
     });
@@ -1449,11 +1453,12 @@ function openNewProject() {
   else updateSupplierDatalist();
   // Populate client datalist
   setTimeout(() => {
+    const names = [...new Set(projects.map(p => p['לקוח-שם']).filter(Boolean))].sort();
+    const opts = names.map(n => `<option value="${n}">`).join('');
     const dl = document.getElementById('clients-datalist');
-    if (dl) {
-      const names = [...new Set(projects.map(p => p['לקוח-שם']).filter(Boolean))].sort();
-      dl.innerHTML = names.map(n => `<option value="${n}">`).join('');
-    }
+    if (dl) dl.innerHTML = opts;
+    const dl2 = document.getElementById('clients-datalist2');
+    if (dl2) dl2.innerHTML = opts;
   }, 50);
   openModal(`
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
@@ -1467,8 +1472,12 @@ function openNewProject() {
           <div class="field"><label>שם פרויקט *</label><input id="nn" type="text" placeholder="שם הפרויקט" autofocus></div>
           <div class="row2">
             <div class="field"><label>לקוח / משרד</label>
-              <input id="nc" type="text" placeholder="שם המשרד" list="clients-datalist" autocomplete="off">
+              <input id="nc" type="text" placeholder="לקוח ראשי" list="clients-datalist" autocomplete="off">
               <datalist id="clients-datalist"></datalist>
+            </div>
+            <div class="field"><label>לקוח שני (אופציונלי)</label>
+              <input id="nc2" type="text" placeholder="לקוח נוסף..." list="clients-datalist2" autocomplete="off">
+              <datalist id="clients-datalist2"></datalist>
             </div>
             <div class="field"><label>מקור פנייה</label><select id="nso">
               <option value="">בחר...</option>
@@ -1646,10 +1655,17 @@ async function saveProject() {
   showToast('שומר פרויקט...');
 
   try {
+    const clientInput2 = document.getElementById('nc2')?.value.trim();
+    const relations = [];
     if (clientInput) {
-      const clientId = await findOrCreateClient(clientInput);
-      if (clientId) props['לקוח'] = { relation: [{ id: clientId }] };
+      const id1 = await findOrCreateClient(clientInput);
+      if (id1) relations.push({ id: id1 });
     }
+    if (clientInput2) {
+      const id2 = await findOrCreateClient(clientInput2);
+      if (id2) relations.push({ id: id2 });
+    }
+    if (relations.length) props['לקוח'] = { relation: relations };
   } catch(e) { console.warn('Client link failed:', e.message); }
 
   try {
