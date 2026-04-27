@@ -210,6 +210,7 @@
       <h1>CRM — הראל גלבוע</h1>
       <div class="header-actions">
         <button class="btn" onclick="openFollowups()">⚡ פולואפ</button>
+        <button class="btn" onclick="openSaleModal()" style="background:var(--green-bg);color:var(--green);border-color:var(--green)">💰 מכירת צילומים</button>
         <button class="btn btn-primary" onclick="openNewProject()">+ פרויקט חדש</button>
         <div class="icon-btn" onclick="logout()" title="התנתק">⚙</div>
       </div>
@@ -282,7 +283,7 @@ const DB_PROJECTS = '462d1169d9814c3a806c843f53703942';
 let DB_SUMMARIES = (() => {
   // Version 3 — fresh DB created by user token
   const v = localStorage.getItem('crm_db_summaries_v');
-  if (v !== '4') { localStorage.removeItem('crm_db_summaries'); localStorage.setItem('crm_db_summaries_v','4'); }
+  if (v !== '5') { localStorage.removeItem('crm_db_summaries'); localStorage.setItem('crm_db_summaries_v','4'); }
   return localStorage.getItem('crm_db_summaries') || '';
 })();
 const SECTORS = ['פרטי','מבנה ציבור','מבנה חינוך','מבנה תעשייה','מסחרי'];
@@ -1444,6 +1445,144 @@ function openFollowups() {
         <div class="modal-footer"><button class="btn" onclick="closeModal()">סגור</button></div>
       </div>
     </div>`);
+}
+
+function openSaleModal() {
+  // Build project list for search
+  const activeProjects = projects.filter(p => p['סטטוס עסקי'] === 'בתהליך' || !p['סטטוס עסקי']);
+  openModal(`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">💰 מכירת צילומים</span>
+          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="section-title">בחר פרויקט</div>
+          <div class="field">
+            <input type="text" id="sale-search" placeholder="חפש פרויקט..." oninput="filterSaleProjects()" autocomplete="off"
+              style="width:100%;padding:9px 11px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-sans)">
+          </div>
+          <div id="sale-projects-list" style="max-height:200px;overflow-y:auto;margin-bottom:16px">
+            ${activeProjects.map(p => `
+              <div class="pitem" onclick="selectSaleProject('${p.id}','${(p['שם פרויקט']||'').replace(/'/g,"\'")}','${(p['לקוח-שם']||'').replace(/'/g,"\'")}')">
+                <span class="pitem-title">${p['שם פרויקט']||'—'}</span>
+                <span style="font-size:12px;color:var(--text2)">${p['לקוח-שם']||''}</span>
+              </div>`).join('')}
+          </div>
+
+          <div id="sale-form" style="display:none">
+            <div style="background:var(--blue-bg);color:var(--blue);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;margin-bottom:14px" id="sale-project-label"></div>
+            <div class="section-title">פרטי הספק</div>
+            <div class="row2">
+              <div class="field"><label>שם ספק</label>
+                <input id="sale-sup-name" type="text" placeholder="שם הספק" list="sup-datalist" autocomplete="off">
+              </div>
+              <div class="field"><label>מודל</label>
+                <select id="sale-model">
+                  <option value="רכישה לאחר צילומים">רכישה לאחר צילומים</option>
+                  <option value="השתתפות בצילומים">השתתפות בצילומים</option>
+                </select>
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>חבילה</label>
+                <select id="sale-pkg" onchange="autoSalePrice()">
+                  <option value="">בחר...</option>
+                  ${PKGS.map(p=>`<option>${p}</option>`).join('')}
+                </select>
+              </div>
+              <div class="field"><label>סכום (₪)</label>
+                <input id="sale-price" type="number" placeholder="0">
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>כמות תמונות</label>
+                <input id="sale-qty" type="number" placeholder="0">
+              </div>
+              <div class="field"><label>איש קשר</label>
+                <input id="sale-contact" type="text" placeholder="שם איש קשר">
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>טלפון</label>
+                <input id="sale-phone" type="tel" placeholder="טלפון">
+              </div>
+              <div class="field"><label>מייל</label>
+                <input id="sale-email" type="email" placeholder="מייל">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal()">ביטול</button>
+          <button class="btn btn-primary" id="sale-save-btn" style="display:none" onclick="saveSale()">שמור מכירה</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+let _saleProjectId = null;
+
+function filterSaleProjects() {
+  const q = (document.getElementById('sale-search')?.value||'').toLowerCase();
+  const items = document.querySelectorAll('#sale-projects-list .pitem');
+  items.forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function selectSaleProject(id, name, client) {
+  _saleProjectId = id;
+  const label = document.getElementById('sale-project-label');
+  if (label) label.textContent = '✓ ' + name + (client ? ' — ' + client : '');
+  const form = document.getElementById('sale-form');
+  if (form) form.style.display = 'block';
+  const btn = document.getElementById('sale-save-btn');
+  if (btn) btn.style.display = '';
+  const search = document.getElementById('sale-search');
+  if (search) { search.value = name; search.disabled = true; }
+  const list = document.getElementById('sale-projects-list');
+  if (list) list.style.display = 'none';
+}
+
+function autoSalePrice() {
+  const pkg = document.getElementById('sale-pkg')?.value;
+  const pr = PKG_PRICES[pkg];
+  if (pr) { const el = document.getElementById('sale-price'); if(el) el.value = pr; }
+}
+
+async function saveSale() {
+  if (!_saleProjectId) return;
+  const name = document.getElementById('sale-sup-name')?.value.trim();
+  if (!name) { alert('נא למלא שם ספק'); return; }
+  const model = document.getElementById('sale-model')?.value;
+  const pkg = document.getElementById('sale-pkg')?.value;
+  const price = document.getElementById('sale-price')?.value;
+  const qty = document.getElementById('sale-qty')?.value;
+  const contact = document.getElementById('sale-contact')?.value.trim();
+  const phone = document.getElementById('sale-phone')?.value.trim();
+  const email = document.getElementById('sale-email')?.value.trim();
+
+  const props = {
+    'שם ספק': { title: [{ text: { content: name } }] },
+    'מודל': { select: { name: model } },
+    'פרויקט': { relation: [{ id: _saleProjectId }] },
+  };
+  if (pkg) props['חבילה'] = { select: { name: pkg } };
+  if (qty) props['כמות תמונות'] = { number: Number(qty) };
+  if (price) props['סכום מכירה — רכישה'] = { number: Number(price) };
+  if (contact) props['איש קשר'] = { rich_text: [{ text: { content: contact } }] };
+  if (phone) props['טלפון'] = { phone_number: phone };
+  if (email) props['מייל'] = { email: email };
+
+  showToast('שומר מכירה...');
+  try {
+    await notionAPI('POST', '/pages', { parent: { database_id: DB_SUPPLIERS }, properties: props });
+    showToast('✓ מכירה נשמרה בהצלחה');
+    closeModal();
+    await loadSuppliers();
+  } catch(e) { showToast('שגיאה: ' + e.message); }
 }
 
 function openNewProject() {
