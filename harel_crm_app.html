@@ -895,20 +895,34 @@ async function loadClients() {
 // ─── Render ───────────────────────────────────────────────────────────────
 function fmt(n) { if (!n && n !== 0) return '—'; return Number(n).toLocaleString('he-IL') + ' ₪'; }
 
+// פלטת פסטל לסטטוסים תפעולים + עסקיים
+const STATUS_COLORS = {
+  // סטטוס תפעולי — ספקטרום עיגול חיים של פרויקט
+  'שיחה נכנסת':      { color: '#5b7fa6', bg: '#edf2f8' },  // כחול-אפור עדין
+  'הצעה נשלחה':      { color: '#7a6fa6', bg: '#f0edf8' },  // סגול עדין
+  'ממתין לאישור':    { color: '#a67a5b', bg: '#f8f0ed' },  // חום-ורוד
+  'מאושר - בתיאום':  { color: '#5b8a6e', bg: '#edf5f1' },  // ירוק-אפור
+  'סיור לוקיישן':    { color: '#6e8a5b', bg: '#f1f5ed' },  // ירוק-זית
+  'ממתין ליום צילום':{ color: '#a6915b', bg: '#f8f4ed' },  // זהב עדין
+  'יום צילום':       { color: '#5b7aa6', bg: '#edf3f8' },  // כחול בהיר
+  'ממתין לעריכה':    { color: '#a65b7a', bg: '#f8edf3' },  // ורוד-סגול
+  'נמסר ללקוח':      { color: '#5b9a78', bg: '#edf7f2' },  // ירוק בינוני
+  'ממתין לתשלום':    { color: '#c47a3a', bg: '#fdf3ea' },  // כתום עמוק
+  'מכירת ספקים':     { color: '#6a9a5b', bg: '#eff7ed' },  // ירוק בהיר
+  'Done':             { color: '#3a7a4a', bg: '#eaf5ee' },  // ירוק כהה
+  'בוטל':            { color: '#9a4a4a', bg: '#f5eaea' },  // אדום עדין
+  // סטטוס עסקי
+  'בתהליך':          { color: '#333333', bg: '#f0f0f0' },  // שחור-אפור
+  'נסגר':            { color: '#3a7a4a', bg: '#eaf5ee' },  // ירוק
+  'לא נסגר':         { color: '#9a4a4a', bg: '#f5eaea' },  // אדום
+};
+
 function statusColor(s) {
-  if (!s) return 'var(--text3)';
-  // תפעולי
-  if (s === 'Done') return '#3a6b1a';
-  if (s === 'בוטל') return '#8a1a1a';
-  if (['נמסר ללקוח','ממתין לתשלום','מכירת ספקים'].includes(s)) return '#111111';
-  if (['יום צילום','ממתין לעריכה'].includes(s)) return '#444444';
-  if (['מאושר - בתיאום','סיור לוקיישן','ממתין ליום צילום'].includes(s)) return '#666666';
-  if (['שיחה נכנסת','הצעה נשלחה','ממתין לאישור'].includes(s)) return '#999999';
-  // עסקי
-  if (s === 'נסגר') return '#3a6b1a';
-  if (s === 'לא נסגר') return '#8a1a1a';
-  if (s === 'בתהליך') return '#111111';
-  return 'var(--text3)';
+  return STATUS_COLORS[s]?.color || 'var(--text3)';
+}
+
+function statusBg(s) {
+  return STATUS_COLORS[s]?.bg || 'transparent';
 }
 
 function sbc(s) {
@@ -965,7 +979,7 @@ function renderProjects() {
         <span class="card-amount">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</span>
       </div>
       <div class="card-meta">
-        ${p['סטטוס']?`<span style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:${statusColor(p['סטטוס'])}">${p['סטטוס']}</span>`:''}
+        ${p['סטטוס']?`<span style="font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:${statusColor(p['סטטוס'])};background:${statusBg(p['סטטוס'])};padding:2px 7px;display:inline-block">${p['סטטוס']}</span>`:''}
         ${p['לקוח-שם']?`<span class="badge badge-default">${p['לקוח-שם']}</span>`:''}
         ${p['date:מועד צילום:start']?`<span class="badge badge-default">${p['date:מועד צילום:start']}</span>`:''}
         ${p['סקטור']?`<span class="badge badge-default">${p['סקטור']}${p['קטגוריה']?' — '+p['קטגוריה']:''}</span>`:''}
@@ -1523,13 +1537,13 @@ async function openProject(id) {
           <div class="detail-grid">
             <div class="detail-item">
               <div class="label">סטטוס תפעולי</div>
-              <select onchange="updateProp('${id}','סטטוס',this.value);this.style.color=statusColor(this.value)" style="color:${statusColor(p['סטטוס'])}">
+              <select onchange="updateProp('${id}','סטטוס',this.value);this.style.color=statusColor(this.value);this.style.background=statusBg(this.value)" style="color:${statusColor(p['סטטוס'])};background:${statusBg(p['סטטוס'])}">
                 ${PIPELINE.map(s=>`<option ${p['סטטוס']===s?'selected':''}>${s}</option>`).join('')}
               </select>
             </div>
             <div class="detail-item">
               <div class="label">סטטוס עסקי</div>
-              <select onchange="updateProp('${id}','סטטוס עסקי',this.value)" style="color:${statusColor(p['סטטוס עסקי'])}">
+              <select onchange="updateProp('${id}','סטטוס עסקי',this.value);this.style.color=statusColor(this.value);this.style.background=statusBg(this.value)" style="color:${statusColor(p['סטטוס עסקי'])};background:${statusBg(p['סטטוס עסקי'])}">
                 ${['בתהליך','נסגר','לא נסגר'].map(s=>`<option ${p['סטטוס עסקי']===s?'selected':''}>${s}</option>`).join('')}
               </select>
             </div>
