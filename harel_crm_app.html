@@ -802,6 +802,7 @@ async function loadProjects() {
     await loadParticipatingSuppliers();
     renderProjects();
     renderStats();
+    setTimeout(checkAutoFollowups, 2000);
   } catch(e) {
     document.getElementById('projects-list').innerHTML = '<div class="loading" style="color:var(--red)">שגיאה: ' + e.message + '<br><br><small>ודא שהשרת רץ: python3 crm_server.py</small></div>';
   }
@@ -1360,7 +1361,42 @@ function renderFinance() {
     yearlyData[year] += Number(p['סכום הצעה'])||0;
   });
 
-  // Client pie data
+  // Supplier analysis
+  const supModelData = {};
+  let supTotalRev = 0;
+  suppliers.forEach(s => {
+    const model = s['מודל'] || 'לא מוגדר';
+    const amt = Number(s['סכום מכירה — רכישה']) || 0;
+    supModelData[model] = (supModelData[model]||0) + amt;
+    supTotalRev += amt;
+  });
+  const supColors2 = ['#5b8a6e','#a67a5b','#7a6fa6','#5b7fa6','#a65b7a'];
+  const supEntries2 = Object.entries(supModelData).filter(([,v])=>v>0);
+  if (supEntries2.length) {
+    let supAngle2 = -90;
+    const supPaths2 = supEntries2.map(([label, val], i) => {
+      const pct = val / (supTotalRev||1);
+      const a1 = supAngle2 * Math.PI/180, a2 = (supAngle2+pct*360)*Math.PI/180;
+      const x1=80+70*Math.cos(a1), y1=80+70*Math.sin(a1);
+      const x2=80+70*Math.cos(a2), y2=80+70*Math.sin(a2);
+      const path = `<path d="M80,80 L${x1},${y1} A70,70 0 ${pct>0.5?1:0},1 ${x2},${y2} Z" fill="${supColors2[i%supColors2.length]}" opacity="0.85"/>`;
+      supAngle2 += pct*360;
+      return { path, label, val, pct, color: supColors2[i%supColors2.length] };
+    });
+    html += `<div class="section-title" style="margin-top:32px">ניתוח ספקים לפי מודל</div>
+      <div style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;margin-bottom:24px">
+        <svg width="160" height="160" viewBox="0 0 160 160">${supPaths2.map(p=>p.path).join('')}</svg>
+        <div>${supPaths2.map(p=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="width:8px;height:8px;background:${p.color};flex-shrink:0"></div>
+          <span style="font-size:12px">${p.label}</span>
+          <span style="font-size:12px;font-weight:500;margin-right:auto;padding-right:16px">${fmt(p.val)}</span>
+          <span style="font-size:11px;color:var(--text3)">${Math.round(p.pct*100)}%</span>
+        </div>`).join('')}
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">${suppliers.length} ספקים סה"כ</div></div>
+      </div>`;
+  }
+
+    // Client pie data
   const clientData = {};
   closedOrActive.forEach(p => {
     if (!p['סכום הצעה']) return;
@@ -1447,7 +1483,36 @@ function renderFinance() {
               <div style="font-size:12px;font-weight:600;flex-shrink:0">${Math.round((val/totalClient)*100)}%</div>
             </div>`).join('')}
         </div>`}
-    </div>`;
+    </div>
+
+    <div class="section-title" style="margin-top:32px">המרה לפי מקור פנייה</div>
+    ${(() => {
+      const d = {};
+      projects.forEach(p => {
+        const s = p['מקור פנייה'] || 'לא מוגדר';
+        if (!d[s]) d[s] = {total:0,closed:0,lost:0};
+        d[s].total++;
+        if (p['סטטוס עסקי']==='נסגר') d[s].closed++;
+        if (p['סטטוס עסקי']==='לא נסגר') d[s].lost++;
+      });
+      const rows = Object.entries(d).sort((a,b)=>b[1].total-a[1].total).map(([src,v]) => {
+        const rate = v.total>0 ? Math.round(v.closed/v.total*100) : 0;
+        return '<tr>'
+          +'<td style="padding:10px 0;border-bottom:1px solid #e0e0e0;font-size:13px">'+src+'</td>'
+          +'<td style="padding:10px 0;border-bottom:1px solid #e0e0e0;text-align:center;font-size:13px">'+v.total+'</td>'
+          +'<td style="padding:10px 0;border-bottom:1px solid #e0e0e0;text-align:center;font-size:13px;color:#3a7a4a">'+v.closed+'</td>'
+          +'<td style="padding:10px 0;border-bottom:1px solid #e0e0e0;text-align:center;font-size:13px;color:#9a4a4a">'+v.lost+'</td>'
+          +'<td style="padding:10px 0;border-bottom:1px solid #e0e0e0;text-align:center">'
+            +'<div style="display:flex;align-items:center;gap:8px">'
+              +'<div style="flex:1;height:3px;background:#ddd"><div style="width:'+rate+'%;height:100%;background:#3a7a4a"></div></div>'
+              +'<span style="font-size:11px;font-weight:500;min-width:32px">'+rate+'%</span>'
+            +'</div></td></tr>';
+      }).join('');
+      return '<table style="width:100%;border-collapse:collapse"><thead><tr>'
+        +['מקור','סה"כ','נסגר','לא נסגר','המרה'].map((h,i)=>'<th style="padding:8px 0;border-bottom:2px solid #ccc;text-align:'+(i===0?'right':'center')+';font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888;font-weight:400">'+h+'</th>').join('')
+        +'</tr></thead><tbody>'+rows+'</tbody></table>';
+    })()}
+    `;
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────
@@ -2566,6 +2631,42 @@ setInterval(() => {
     loadProjects();
   }
 }, 60000);
+
+// Auto followup check — runs once on load
+async function checkAutoFollowups() {
+  if (!projects.length) return;
+  const today = new Date();
+  const overdue = projects.filter(p => {
+    if (p['סטטוס עסקי'] === 'לא נסגר' || p['סטטוס עסקי'] === 'נסגר') return false;
+    const fu = p['date:תאריך פולואפ:start'];
+    if (!fu) {
+      // No followup date — check if stuck in early stage for 5+ days
+      const entry = p['date:תאריך הזנה:start'];
+      if (!entry) return false;
+      const days = Math.floor((today - new Date(entry)) / 86400000);
+      const earlyStages = ['שיחה נכנסת','הצעה נשלחה','ממתין לאישור'];
+      return days >= 5 && earlyStages.includes(p['סטטוס']);
+    }
+    return fu <= today.toISOString().split('T')[0];
+  });
+  if (overdue.length && !sessionStorage.getItem('crm_followup_sent_today')) {
+    sessionStorage.setItem('crm_followup_sent_today', '1');
+    await sendFollowupEmail(overdue);
+  }
+}
+
+async function sendFollowupEmail(projects) {
+  const lines = projects.map(p =>
+    `• ${p['שם פרויקט']||'—'} — ${p['לקוח-שם']||''} (${p['סטטוס']||''})`
+  ).join('\n');
+  const body = `שלום הראל,\n\nהפרויקטים הבאים מחכים לפולואפ:\n\n${lines}\n\nCRM הראל גלבוע`;
+  try {
+    await notionAPI('POST', '/followup-email', { to: 'gilboa.studio@gmail.com', subject: `פולואפ: ${projects.length} פרויקטים ממתינים`, body });
+  } catch(e) { console.log('Email via server failed, opening mailto'); }
+  // Fallback — mailto link
+  const mailto = `mailto:gilboa.studio@gmail.com?subject=${encodeURIComponent(`פולואפ: ${projects.length} פרויקטים ממתינים`)}&body=${encodeURIComponent(body)}`;
+  window.open(mailto);
+}
 </script>
 </body>
 </html>
