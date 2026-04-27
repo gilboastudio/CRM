@@ -23,17 +23,27 @@
     src: local('Futura PT Medium'), local('FuturaPT-Medium'), local('Futura PT Demi'), local('FuturaPT-Demi');
     font-weight: 500;
   }
+  @font-face {
+    font-family: 'NarkisBlock';
+    src: local('Narkis Block'), local('NarkisBlock'), local('Narkis Block MF'), local('NarkisBlockMF');
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: 'NarkisBlock';
+    src: local('Narkis Block Bold'), local('NarkisBlockBold'), local('Narkis Block MF Bold');
+    font-weight: 500;
+  }
 
   :root {
-    --font: 'FuturaPT', 'Jost', 'Futura', -apple-system, sans-serif;
+    --font: 'NarkisBlock', 'Narkis Block', 'FuturaPT', 'Jost', 'Futura', -apple-system, sans-serif;
     --bg: #ffffff;
     --surface: #ffffff;
     --surface2: #f9f9f8;
     --border: rgba(0,0,0,0.08);
     --border2: rgba(0,0,0,0.15);
     --text: #111111;
-    --text2: #888888;
-    --text3: #bbbbbb;
+    --text2: #555555;
+    --text3: #888888;
     --accent: #111111;
     --green: #3a6b1a;
     --green-bg: #f0f5eb;
@@ -54,9 +64,10 @@
     background: var(--bg); 
     color: var(--text); 
     direction: rtl; 
-    font-size: 13px; 
+    font-size: 14px; 
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    font-weight: 400;
   }
 
   /* ─── Layout ─── */
@@ -203,7 +214,7 @@
   .project-card:hover { background: var(--surface2); padding-left: 12px; padding-right: 12px; margin: 0 -12px; }
   .card-row { display: flex; align-items: center; justify-content: space-between; }
   .card-title { font-size: 14px; font-weight: 400; letter-spacing: 0.2px; color: var(--text); }
-  .card-amount { font-size: 14px; font-weight: 300; letter-spacing: -0.3px; color: var(--text); }
+  .card-amount { font-size: 14px; font-weight: 500; letter-spacing: -0.3px; color: var(--text); }
   .card-meta { display: flex; gap: 16px; align-items: center; margin-top: 5px; flex-wrap: wrap; }
 
   /* ─── Badges → minimal ─── */
@@ -1225,8 +1236,8 @@ function renderCalendar() {
   // ─── Weekly breakdown for current + next month ───────────────────
   function getWeekLabel(dateStr) {
     const d = new Date(dateStr);
-    const day = d.getDay(); // 0=Sun
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    const day = d.getDay(); // 0=Sun (Israel week starts Sunday)
+    const diff = d.getDate() - day; // Sunday as start
     const mon = new Date(d.setDate(diff));
     const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
     const fmt2 = d2 => `${String(d2.getDate()).padStart(2,'0')}/${String(d2.getMonth()+1).padStart(2,'0')}`;
