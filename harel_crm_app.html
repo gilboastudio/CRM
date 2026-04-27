@@ -36,11 +36,35 @@
 
   :root {
     --font: 'NarkisBlock', 'Narkis Block', 'FuturaPT', 'Jost', 'Futura', -apple-system, sans-serif;
+    color-scheme: light dark;
+  }
+
+  .dark-mode {
+    --bg: #111111;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: rgba(255,255,255,0.12);
+    --border2: rgba(255,255,255,0.22);
+    --text: #f0f0f0;
+    --text2: #aaaaaa;
+    --text3: #666666;
+    --green: #7ab84a;
+    --green-bg: #1a2e0a;
+    --orange: #e0943a;
+    --orange-bg: #2a1800;
+    --blue: #6aaae0;
+    --blue-bg: #0a1828;
+    --red: #e06060;
+    --red-bg: #2a0a0a;
+  }
+
+  :root {
+    --font: 'NarkisBlock', 'Narkis Block', 'FuturaPT', 'Jost', 'Futura', -apple-system, sans-serif;
     --bg: #ffffff;
     --surface: #ffffff;
     --surface2: #f9f9f8;
-    --border: rgba(0,0,0,0.08);
-    --border2: rgba(0,0,0,0.15);
+    --border: rgba(0,0,0,0.14);
+    --border2: rgba(0,0,0,0.25);
     --text: #111111;
     --text2: #555555;
     --text3: #888888;
@@ -529,8 +553,9 @@
     <div class="header">
       <h1>CRM — הראל גלבוע</h1>
       <div class="header-actions">
-        <button class="btn" onclick="openFollowups()">⚡ פולואפ</button>
-        <button class="btn" onclick="openSaleModal()" style="background:var(--green-bg);color:var(--green);border-color:var(--green)">💰 מכירת צילומים</button>
+        <button class="btn" id="dark-btn" onclick="toggleDarkMode()" title="מצב כהה">◐</button>
+        <button class="btn btn-primary" onclick="openFollowups()">פולואפ</button>
+        <button class="btn btn-primary" onclick="openSaleModal()">+ מכירת צילומים</button>
         <button class="btn btn-primary" onclick="openNewProject()">+ פרויקט חדש</button>
         <div class="icon-btn" onclick="logout()" title="התנתק">⚙</div>
       </div>
@@ -1958,6 +1983,24 @@ async function saveSale() {
     await loadSuppliers();
   } catch(e) { showToast('שגיאה: ' + e.message); }
 }
+
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle('dark-mode');
+  localStorage.setItem('crm_dark', isDark ? '1' : '0');
+  document.getElementById('dark-btn').textContent = isDark ? '○' : '◐';
+}
+
+// Init dark mode from localStorage
+(function() {
+  if (localStorage.getItem('crm_dark') === '1') {
+    document.body.classList.add('dark-mode');
+    // update button after DOM ready
+    window.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('dark-btn');
+      if (btn) btn.textContent = '○';
+    });
+  }
+})();
 
 function openNewProject() {
   newSuppliers = [];
