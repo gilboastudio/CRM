@@ -1224,10 +1224,10 @@ function renderCalendar() {
 
   const firstDay = new Date(state.year, state.month, 1);
   const lastDay = new Date(state.year, state.month + 1, 0);
-  const startDow = (firstDay.getDay() + 1) % 7; // adjust for Sunday=0
+  const startDow = firstDay.getDay(); // ישראל: ראשון=0=עמודה ימנית
 
   const heMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-  const heDays = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+  const heDays = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳']; // ישראל: ראשון ימין, שבת שמאל
 
   // Get projects this month
   const monthStr = `${state.year}-${String(state.month+1).padStart(2,'0')}`;
@@ -1451,38 +1451,57 @@ function renderFinance() {
         </div>`}
     </div>
 
-    <div class="section-title" style="margin-top:32px">ניתוח ספקים לפי מודל</div>
+    <div class="section-title" style="margin-top:32px">
+      ניתוח ספקים
+      <span style="float:left;font-size:9px;letter-spacing:1px;cursor:pointer" onclick="
+        const a=document.getElementById('sup-pie-by-name');
+        const b=document.getElementById('sup-pie-by-pkg');
+        const t=document.getElementById('sup-pie-toggle');
+        if(a.style.display==='none'){a.style.display='flex';b.style.display='none';t.textContent='הצג לפי חבילה';}
+        else{a.style.display='none';b.style.display='flex';t.textContent='הצג לפי ספק';}
+      " id="sup-pie-toggle">הצג לפי חבילה</span>
+    </div>
     ${(() => {
-      const sd = {};
-      let stot = 0;
+      const sc = ['#5b8a6e','#a67a5b','#7a6fa6','#5b7fa6','#a65b7a','#8a6e5b','#6e5b8a','#5b6e8a'];
+      function makePie(entries, total) {
+        if (!entries.length) return '';
+        let sa = -90;
+        const sp = entries.map(([label,val],i) => {
+          const pct=val/(total||1);
+          const a1=sa*Math.PI/180, a2=(sa+pct*360)*Math.PI/180;
+          const x1=80+70*Math.cos(a1),y1=80+70*Math.sin(a1);
+          const x2=80+70*Math.cos(a2),y2=80+70*Math.sin(a2);
+          const path='<path d="M80,80 L'+x1+','+y1+' A70,70 0 '+(pct>0.5?1:0)+',1 '+x2+','+y2+' Z" fill="'+sc[i%sc.length]+'" opacity="0.85"/>';
+          sa+=pct*360;
+          return {path,label,val,pct,color:sc[i%sc.length]};
+        });
+        return '<svg width="160" height="160" viewBox="0 0 160 160">'+sp.map(p=>p.path).join('')+'</svg>'
+          +'<div>'+sp.map(p=>'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+            +'<div style="width:8px;height:8px;background:'+p.color+';flex-shrink:0"></div>'
+            +'<span style="font-size:12px">'+p.label+'</span>'
+            +'<span style="font-size:12px;font-weight:500;margin-right:auto;padding-right:16px">'+fmt(p.val)+'</span>'
+            +'<span style="font-size:11px;color:var(--text3)">'+Math.round(p.pct*100)+'%</span>'
+          +'</div>').join('')+'</div>';
+      }
+      // By supplier name
+      const byName = {};
+      const byPkg = {};
+      let tot = 0;
       suppliers.forEach(s => {
-        const m = s['מודל']||'לא מוגדר';
-        const a = Number(s['סכום מכירה — רכישה'])||0;
-        sd[m] = (sd[m]||0)+a; stot+=a;
+        const n=s['שם ספק']||'לא מוגדר';
+        const p=s['חבילה']||'ללא חבילה';
+        const a=Number(s['סכום מכירה — רכישה'])||0;
+        byName[n]=(byName[n]||0)+a;
+        byPkg[p]=(byPkg[p]||0)+a;
+        tot+=a;
       });
-      const sc = ['#5b8a6e','#a67a5b','#7a6fa6','#5b7fa6','#a65b7a'];
-      const se = Object.entries(sd).filter(([,v])=>v>0);
-      if (!se.length) return '';
-      let sa = -90;
-      const sp = se.map(([label,val],i) => {
-        const pct=val/(stot||1);
-        const a1=sa*Math.PI/180, a2=(sa+pct*360)*Math.PI/180;
-        const x1=80+70*Math.cos(a1),y1=80+70*Math.sin(a1);
-        const x2=80+70*Math.cos(a2),y2=80+70*Math.sin(a2);
-        const path='<path d="M80,80 L'+x1+','+y1+' A70,70 0 '+(pct>0.5?1:0)+',1 '+x2+','+y2+' Z" fill="'+sc[i%sc.length]+'" opacity="0.85"/>';
-        sa+=pct*360;
-        return {path,label,val,pct,color:sc[i%sc.length]};
-      });
-      return '<div style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;margin-bottom:24px">'
-        +'<svg width="160" height="160" viewBox="0 0 160 160">'+sp.map(p=>p.path).join('')+'</svg>'
-        +'<div>'+sp.map(p=>'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
-          +'<div style="width:8px;height:8px;background:'+p.color+';flex-shrink:0"></div>'
-          +'<span style="font-size:12px">'+p.label+'</span>'
-          +'<span style="font-size:12px;font-weight:500;margin-right:auto;padding-right:16px">'+fmt(p.val)+'</span>'
-          +'<span style="font-size:11px;color:var(--text3)">'+Math.round(p.pct*100)+'%</span>'
-        +'</div>').join('')
-        +'<div style="font-size:11px;color:var(--text3);margin-top:4px">'+suppliers.length+' ספקים סה"כ</div></div>'
-      +'</div>';
+      const nameEntries = Object.entries(byName).sort((a,b)=>b[1]-a[1]).slice(0,8).filter(([,v])=>v>0);
+      const pkgEntries = Object.entries(byPkg).sort((a,b)=>b[1]-a[1]).filter(([,v])=>v>0);
+      if (!nameEntries.length) return '<div style="color:var(--text3);font-size:12px;padding:20px 0">אין נתוני ספקים</div>';
+      return '<div id="sup-pie-by-name" style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;margin-bottom:24px">'+makePie(nameEntries,tot)
+        +'<div style="font-size:11px;color:var(--text3);padding-top:8px">'+suppliers.length+' ספקים סה"כ · '+fmt(tot)+' סה"כ הכנסות</div>'
+        +'</div>'
+        +'<div id="sup-pie-by-pkg" style="display:none;gap:40px;align-items:center;flex-wrap:wrap;margin-bottom:24px">'+makePie(pkgEntries,tot)+'</div>';
     })()}
 
         <div class="section-title" style="margin-top:32px">המרה לפי מקור פנייה</div>
