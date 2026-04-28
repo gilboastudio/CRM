@@ -1653,7 +1653,7 @@ async function openProject(id) {
             <div class="label">מקור פנייה</div>
             <select onchange="updateProp('${id}','מקור פנייה',this.value)" style="width:100%;padding:6px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;color:var(--text)">
               <option value="">בחר...</option>
-              ${['המלצה','פנייה יזומה על ידי','אינסטגרם','מייל','טלפון','אתר','פגישה','אחר'].map(s=>`<option ${p['מקור פנייה']===s?'selected':''}>${s}</option>`).join('')}
+              ${['המלצה','לקוח חוזר','פנייה יזומה על ידי','אינסטגרם','מייל','טלפון','אחר'].map(s=>`<option ${p['מקור פנייה']===s?'selected':''}>${s}</option>`).join('')}
             </select>
           </div>
           <div class="detail-item">
@@ -2150,12 +2150,11 @@ function openNewProject() {
             <div class="field"><label>מקור פנייה</label><select id="nso">
               <option value="">בחר...</option>
               <option>המלצה</option>
+              <option>לקוח חוזר</option>
               <option>פנייה יזומה על ידי</option>
               <option>אינסטגרם</option>
               <option>מייל</option>
               <option>טלפון</option>
-              <option>אתר</option>
-              <option>פגישה</option>
               <option>אחר</option>
             </select></div>
           </div>
