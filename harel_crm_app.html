@@ -167,6 +167,7 @@
     border: 1px solid var(--border2); 
     background: transparent; 
     cursor: pointer; font-size: 14px; 
+    color: var(--text);
     transition: all 0.15s; 
   }
   .icon-btn:hover { background: var(--surface2); }
@@ -1361,41 +1362,6 @@ function renderFinance() {
     yearlyData[year] += Number(p['סכום הצעה'])||0;
   });
 
-  // Supplier analysis
-  const supModelData = {};
-  let supTotalRev = 0;
-  suppliers.forEach(s => {
-    const model = s['מודל'] || 'לא מוגדר';
-    const amt = Number(s['סכום מכירה — רכישה']) || 0;
-    supModelData[model] = (supModelData[model]||0) + amt;
-    supTotalRev += amt;
-  });
-  const supColors2 = ['#5b8a6e','#a67a5b','#7a6fa6','#5b7fa6','#a65b7a'];
-  const supEntries2 = Object.entries(supModelData).filter(([,v])=>v>0);
-  if (supEntries2.length) {
-    let supAngle2 = -90;
-    const supPaths2 = supEntries2.map(([label, val], i) => {
-      const pct = val / (supTotalRev||1);
-      const a1 = supAngle2 * Math.PI/180, a2 = (supAngle2+pct*360)*Math.PI/180;
-      const x1=80+70*Math.cos(a1), y1=80+70*Math.sin(a1);
-      const x2=80+70*Math.cos(a2), y2=80+70*Math.sin(a2);
-      const path = `<path d="M80,80 L${x1},${y1} A70,70 0 ${pct>0.5?1:0},1 ${x2},${y2} Z" fill="${supColors2[i%supColors2.length]}" opacity="0.85"/>`;
-      supAngle2 += pct*360;
-      return { path, label, val, pct, color: supColors2[i%supColors2.length] };
-    });
-    html += `<div class="section-title" style="margin-top:32px">ניתוח ספקים לפי מודל</div>
-      <div style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;margin-bottom:24px">
-        <svg width="160" height="160" viewBox="0 0 160 160">${supPaths2.map(p=>p.path).join('')}</svg>
-        <div>${supPaths2.map(p=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <div style="width:8px;height:8px;background:${p.color};flex-shrink:0"></div>
-          <span style="font-size:12px">${p.label}</span>
-          <span style="font-size:12px;font-weight:500;margin-right:auto;padding-right:16px">${fmt(p.val)}</span>
-          <span style="font-size:11px;color:var(--text3)">${Math.round(p.pct*100)}%</span>
-        </div>`).join('')}
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">${suppliers.length} ספקים סה"כ</div></div>
-      </div>`;
-  }
-
     // Client pie data
   const clientData = {};
   closedOrActive.forEach(p => {
@@ -1485,7 +1451,41 @@ function renderFinance() {
         </div>`}
     </div>
 
-    <div class="section-title" style="margin-top:32px">המרה לפי מקור פנייה</div>
+    <div class="section-title" style="margin-top:32px">ניתוח ספקים לפי מודל</div>
+    ${(() => {
+      const sd = {};
+      let stot = 0;
+      suppliers.forEach(s => {
+        const m = s['מודל']||'לא מוגדר';
+        const a = Number(s['סכום מכירה — רכישה'])||0;
+        sd[m] = (sd[m]||0)+a; stot+=a;
+      });
+      const sc = ['#5b8a6e','#a67a5b','#7a6fa6','#5b7fa6','#a65b7a'];
+      const se = Object.entries(sd).filter(([,v])=>v>0);
+      if (!se.length) return '';
+      let sa = -90;
+      const sp = se.map(([label,val],i) => {
+        const pct=val/(stot||1);
+        const a1=sa*Math.PI/180, a2=(sa+pct*360)*Math.PI/180;
+        const x1=80+70*Math.cos(a1),y1=80+70*Math.sin(a1);
+        const x2=80+70*Math.cos(a2),y2=80+70*Math.sin(a2);
+        const path='<path d="M80,80 L'+x1+','+y1+' A70,70 0 '+(pct>0.5?1:0)+',1 '+x2+','+y2+' Z" fill="'+sc[i%sc.length]+'" opacity="0.85"/>';
+        sa+=pct*360;
+        return {path,label,val,pct,color:sc[i%sc.length]};
+      });
+      return '<div style="display:flex;gap:40px;align-items:center;flex-wrap:wrap;margin-bottom:24px">'
+        +'<svg width="160" height="160" viewBox="0 0 160 160">'+sp.map(p=>p.path).join('')+'</svg>'
+        +'<div>'+sp.map(p=>'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+          +'<div style="width:8px;height:8px;background:'+p.color+';flex-shrink:0"></div>'
+          +'<span style="font-size:12px">'+p.label+'</span>'
+          +'<span style="font-size:12px;font-weight:500;margin-right:auto;padding-right:16px">'+fmt(p.val)+'</span>'
+          +'<span style="font-size:11px;color:var(--text3)">'+Math.round(p.pct*100)+'%</span>'
+        +'</div>').join('')
+        +'<div style="font-size:11px;color:var(--text3);margin-top:4px">'+suppliers.length+' ספקים סה"כ</div></div>'
+      +'</div>';
+    })()}
+
+        <div class="section-title" style="margin-top:32px">המרה לפי מקור פנייה</div>
     ${(() => {
       const d = {};
       projects.forEach(p => {
@@ -1596,7 +1596,7 @@ async function openProject(id) {
       <div class="modal">
         <div class="modal-header">
           <span class="modal-title">${p['שם פרויקט']||'פרויקט'}</span>
-          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+          <button class="icon-btn btn-ghost" onclick="closeModal()" style="color:var(--text)">✕</button>
         </div>
         <div class="modal-body">
           <div class="detail-grid">
@@ -1746,7 +1746,7 @@ function openClientModal(name) {
       <div class="modal">
         <div class="modal-header">
           <span class="modal-title">${name}</span>
-          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+          <button class="icon-btn btn-ghost" onclick="closeModal()" style="color:var(--text)">✕</button>
         </div>
         <div class="modal-body">
           ${(() => { const cl = clients.find(x=>x['שם משרד']===name)||{}; return cl['טלפון']||cl['מייל']||cl['איש קשר'] ? `
@@ -1787,7 +1787,7 @@ function openSupplierModal(id) {
       <div class="modal">
         <div class="modal-header">
           <span class="modal-title">${s['שם ספק']||'ספק'}</span>
-          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+          <button class="icon-btn btn-ghost" onclick="closeModal()" style="color:var(--text)">✕</button>
         </div>
         <div class="modal-body">
           <div class="section-title">פרטי ספק</div>
@@ -1907,7 +1907,7 @@ function openFollowups() {
       <div class="modal">
         <div class="modal-header">
           <span class="modal-title">פולואפים דחופים (${due.length})</span>
-          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+          <button class="icon-btn btn-ghost" onclick="closeModal()" style="color:var(--text)">✕</button>
         </div>
         <div class="modal-body">
           ${due.length===0?'<div class="empty">אין פולואפים דחופים 🎉</div>':
@@ -1933,7 +1933,7 @@ function openSaleModal() {
       <div class="modal">
         <div class="modal-header">
           <span class="modal-title">💰 מכירת צילומים</span>
-          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+          <button class="icon-btn btn-ghost" onclick="closeModal()" style="color:var(--text)">✕</button>
         </div>
         <div class="modal-body">
           <div class="section-title">בחר פרויקט</div>
@@ -2100,7 +2100,7 @@ function openNewProject() {
       <div class="modal">
         <div class="modal-header">
           <span class="modal-title">פרויקט חדש</span>
-          <button class="icon-btn btn-ghost" onclick="closeModal()">✕</button>
+          <button class="icon-btn btn-ghost" onclick="closeModal()" style="color:var(--text)">✕</button>
         </div>
         <div class="modal-body">
           <div class="section-title">פרטי הפרויקט</div>
