@@ -626,12 +626,7 @@
 <script>
 // ─── Config ───────────────────────────────────────────────────────────────
 const DB_PROJECTS = '462d1169d9814c3a806c843f53703942';
-let DB_SUMMARIES = (() => {
-  // Version 3 — fresh DB created by user token
-  const v = localStorage.getItem('crm_db_summaries_v');
-  if (v !== '5') { localStorage.removeItem('crm_db_summaries'); localStorage.setItem('crm_db_summaries_v','4'); }
-  return localStorage.getItem('crm_db_summaries') || '';
-})();
+const DB_SUMMARIES = '34fe323d0ee8812db0e6c521aa13cd41'; // fixed — do not change
 const SECTORS = ['פרטי','מבנה ציבור','מבנה חינוך','מבנה תעשייה','מסחרי'];
 const SECTOR_CATEGORIES = {
   'פרטי':         ['בית פרטי','דירה','פנטהאוז','בניין מגורים'],
@@ -1110,48 +1105,9 @@ function updateSupplierDatalist() {
 
 let summaries = [];
 
-async function ensureSummariesDB() {
-  if (DB_SUMMARIES) return true;
-  showToast('יוצר DB סיכומים...');
-  try {
-    // Create the DB under CRM page
-    const res = await notionAPI('POST', '/databases', {
-      parent: { page_id: '341e323d0ee881399f4ff6448e9bf257' },
-      title: [{ type: 'text', text: { content: 'סיכומי פרויקט' } }],
-      properties: {
-        'שם פרויקט': { title: {} },
-        'לקוח': { rich_text: {} },
-        'סקטור': { select: { options: [
-          { name: 'פרטי', color: 'blue' },
-          { name: 'מבנה ציבור', color: 'green' },
-          { name: 'מבנה חינוך', color: 'orange' },
-          { name: 'מבנה תעשייה', color: 'purple' },
-          { name: 'מסחרי', color: 'yellow' }
-        ]}},
-        'קטגוריה': { rich_text: {} },
-        'תאריך צילום': { date: {} },
-        'פרויקט': { relation: { database_id: '462d1169d9814c3a806c843f53703942', single_property: {} } },
-        'סיור לוקיישן': { rich_text: {} },
-        'הערכות לצילומים': { rich_text: {} },
-        'צילומים': { rich_text: {} },
-        'עריכה': { rich_text: {} },
-        'סיכום': { rich_text: {} },
-      }
-    });
-    DB_SUMMARIES = res.id.replace(/-/g,'');
-    localStorage.setItem('crm_db_summaries', DB_SUMMARIES);
-    showToast('✓ DB סיכומים נוצר');
-    return true;
-  } catch(e) {
-    showToast('שגיאה ביצירת DB: ' + e.message);
-    return false;
-  }
-}
 
 async function loadSummaries() {
   document.getElementById('summaries-list').innerHTML = '<div class="loading">טוען סיכומים...</div>';
-  const dbReady = await ensureSummariesDB();
-  if (!dbReady) return;
   try {
     const pages = await queryDB(DB_SUMMARIES, null,
       [{ property: 'תאריך צילום', direction: 'descending' }]);
@@ -2616,8 +2572,6 @@ async function saveProjectSummary(projectId, projectName, clientName, shootDate,
     props[f] = { rich_text: [{ text: { content: html } }] };
   });
   showToast('שומר סיכום...');
-  const dbReady = await ensureSummariesDB();
-  if (!dbReady) return;
   try {
     if (existingId) {
       await notionAPI('PATCH', '/pages/' + existingId, { properties: props });
