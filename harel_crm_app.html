@@ -979,12 +979,15 @@ function renderProjects() {
           <span class="card-title">${p['שם פרויקט']||'—'}</span>
           ${clientLabel ? `<span style="font-size:12px;color:var(--text2)">${clientLabel}</span>` : ''}
         </div>
-        <span class="card-amount">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</span>
+        <div style="display:flex;align-items:baseline;gap:16px">
+          ${p['date:מועד צילום:start'] ? `<span style="font-size:14px;font-weight:700;color:var(--text)">${p['date:מועד צילום:start'].split('-').reverse().join('.')}</span>` : ''}
+          <span class="card-amount">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</span>
+        </div>
       </div>
       <div class="card-meta">
         ${p['סטטוס']?`<span style="font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:${statusColor(p['סטטוס'])};background:${statusBg(p['סטטוס'])};padding:2px 7px;display:inline-block">${p['סטטוס']}</span>`:''}
         ${p['לקוח-שם']?`<span class="badge badge-default">${p['לקוח-שם']}</span>`:''}
-        ${p['date:מועד צילום:start']?`<span class="badge badge-default">${p['date:מועד צילום:start']}</span>`:''}
+
         ${p['סקטור']?`<span class="badge badge-default">${p['סקטור']}${p['קטגוריה']?' — '+p['קטגוריה']:''}</span>`:''}
         ${isDue?`<span class="followup-alert">↑ פולואפ</span>`:''}
       </div>
