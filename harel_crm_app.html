@@ -980,7 +980,8 @@ function renderProjects() {
           ${clientLabel ? `<span style="font-size:12px;color:var(--text2)">${clientLabel}</span>` : ''}
         </div>
         <div style="display:flex;align-items:baseline;gap:16px">
-          ${p['date:מועד צילום:start'] ? `<span style="font-size:14px;font-weight:700;color:var(--text)">${p['date:מועד צילום:start'].split('-').reverse().join('.')}</span>` : ''}
+          ${p['date:מועד צילום:start'] ? `<span style="font-size:13px;font-weight:400;color:var(--text2)">${p['date:מועד צילום:start'].split('-').reverse().join('.')}</span>` : ''}
+          ${p['date:מועד צילום:start'] ? `<span style="color:var(--border2);font-weight:300;margin:0 2px">|</span>` : ''}
           <span class="card-amount">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</span>
         </div>
       </div>
@@ -1750,20 +1751,23 @@ async function openProject(id) {
           <div class="field">
             <label>${f}</label>
             <div style="border:1px solid var(--border2);background:var(--surface)">
-              <div style="display:flex;gap:1px;padding:4px 6px;border-bottom:1px solid var(--border);background:var(--surface2)">
-                <button type="button" title="Bold" onclick="smFormat('sm-${f}','bold')"
-                  style="width:26px;height:24px;border:none;background:transparent;cursor:pointer;font-weight:700;font-size:13px;font-family:inherit;color:var(--text)">B</button>
-                <div style="width:1px;background:var(--border);margin:2px 3px"></div>
-                <button type="button" title="שחור" onclick="smColor('sm-${f}','#111111')"
-                  style="width:16px;height:16px;background:#111111;border:none;cursor:pointer;margin:4px 2px;border-radius:50%"></button>
-                <button type="button" title="אדום" onclick="smColor('sm-${f}','#c0392b')"
-                  style="width:16px;height:16px;background:#c0392b;border:none;cursor:pointer;margin:4px 2px;border-radius:50%"></button>
-                <button type="button" title="ירוק" onclick="smColor('sm-${f}','#27ae60')"
-                  style="width:16px;height:16px;background:#27ae60;border:none;cursor:pointer;margin:4px 2px;border-radius:50%"></button>
-                <button type="button" title="כחול" onclick="smColor('sm-${f}','#2980b9')"
-                  style="width:16px;height:16px;background:#2980b9;border:none;cursor:pointer;margin:4px 2px;border-radius:50%"></button>
+              <div style="display:flex;align-items:center;gap:2px;padding:4px 8px;border-bottom:1px solid var(--border);background:var(--surface2)">
+                <button type="button" onmousedown="event.preventDefault();document.execCommand('bold')"
+                  style="width:28px;height:24px;border:1px solid transparent;background:transparent;cursor:pointer;font-weight:700;font-size:13px;font-family:inherit;color:var(--text);display:flex;align-items:center;justify-content:center">B</button>
+                <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
+                <button type="button" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#111111')"
+                  title="שחור" style="width:16px;height:16px;background:#111111;border:none;cursor:pointer;border-radius:50%;flex-shrink:0"></button>
+                <button type="button" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#c0392b')"
+                  title="אדום" style="width:16px;height:16px;background:#c0392b;border:none;cursor:pointer;border-radius:50%;flex-shrink:0"></button>
+                <button type="button" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#27ae60')"
+                  title="ירוק" style="width:16px;height:16px;background:#27ae60;border:none;cursor:pointer;border-radius:50%;flex-shrink:0"></button>
+                <button type="button" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#2980b9')"
+                  title="כחול" style="width:16px;height:16px;background:#2980b9;border:none;cursor:pointer;border-radius:50%;flex-shrink:0"></button>
               </div>
-              <textarea id="sm-${f}" rows="3" placeholder="${f}..." style="width:100%;padding:8px 10px;border:none;font-size:13px;font-family:inherit;background:transparent;color:var(--text);resize:vertical;line-height:1.5;outline:none">${smFields[f]||''}</textarea>
+              <div id="sm-${f}" contenteditable="true"
+                data-field="${f}"
+                style="min-height:72px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);line-height:1.6;outline:none;direction:rtl"
+                >${smFields[f]||''}</div>
             </div>
           </div>`).join('')}
         <button class="btn btn-primary" style="width:100%;margin-bottom:16px" onclick="saveProjectSummary('${id}','${p['שם פרויקט']||''}','${p['לקוח-שם']||''}','${p['date:מועד צילום:start']||''}',${JSON.stringify(smSummaryId)})">שמור סיכום</button>
@@ -2566,42 +2570,7 @@ async function deletePage(id, name, onSuccess) {
   } catch(e) { showToast('שגיאה: ' + e.message); }
 }
 
-function smFormat(id, type) {
-  const ta = document.getElementById(id);
-  if (!ta) return;
-  const start = ta.selectionStart;
-  const end = ta.selectionEnd;
-  const sel = ta.value.substring(start, end);
-  if (!sel) return;
-  let replacement = sel;
-  if (type === 'bold') {
-    // Toggle bold: wrap with ** or remove if already wrapped
-    if (sel.startsWith('**') && sel.endsWith('**')) {
-      replacement = sel.slice(2, -2);
-    } else {
-      replacement = '**' + sel + '**';
-    }
-  }
-  ta.value = ta.value.substring(0, start) + replacement + ta.value.substring(end);
-  ta.selectionStart = start;
-  ta.selectionEnd = start + replacement.length;
-  ta.focus();
-}
-
-function smColor(id, color) {
-  const ta = document.getElementById(id);
-  if (!ta) return;
-  const start = ta.selectionStart;
-  const end = ta.selectionEnd;
-  const sel = ta.value.substring(start, end);
-  if (!sel) return;
-  // Use simple color tag: [color:red]text[/color]
-  const replacement = `[color:${color}]${sel}[/color]`;
-  ta.value = ta.value.substring(0, start) + replacement + ta.value.substring(end);
-  ta.selectionStart = start;
-  ta.selectionEnd = start + replacement.length;
-  ta.focus();
-}
+// smFormat/smColor replaced by execCommand on contenteditable
 
 async function saveProjectSummary(projectId, projectName, clientName, shootDate, existingId) {
   const p = projects.find(x=>x.id===projectId)||{};
@@ -2615,9 +2584,13 @@ async function saveProjectSummary(projectId, projectName, clientName, shootDate,
   if (sector) props['סקטור'] = { select: { name: sector } };
   if (shootDate) props['תאריך צילום'] = { date: { start: shootDate } };
   const fields = ['סיור לוקיישן','הערכות לצילומים','צילומים','עריכה','סיכום'];
+  // Read from contenteditable divs (innerHTML for rich text)
   fields.forEach(f => {
-    const val = document.getElementById('sm-' + f)?.value || '';
-    props[f] = { rich_text: [{ text: { content: val } }] };
+    const el = document.getElementById('sm-' + f);
+    const val = el ? el.innerText || '' : '';
+    const html = el ? el.innerHTML || '' : '';
+    // Save as rich text with HTML preserved in content
+    props[f] = { rich_text: [{ text: { content: html } }] };
   });
   showToast('שומר סיכום...');
   const dbReady = await ensureSummariesDB();
