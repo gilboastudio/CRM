@@ -804,6 +804,7 @@ async function loadProjects() {
     renderProjects();
     renderStats();
     setTimeout(checkAutoFollowups, 2000);
+    setTimeout(autoUpdateStatuses, 3000);
   } catch(e) {
     document.getElementById('projects-list').innerHTML = '<div class="loading" style="color:var(--red)">שגיאה: ' + e.message + '<br><br><small>ודא שהשרת רץ: python3 crm_server.py</small></div>';
   }
@@ -2672,6 +2673,33 @@ setInterval(() => {
 }, 60000);
 
 // Auto followup check — runs once on load
+async function autoUpdateStatuses() {
+  const today = new Date().toISOString().split('T')[0];
+  const toUpdate = projects.filter(p => {
+    const shootDate = p['date:מועד צילום:start'];
+    if (!shootDate) return false;
+    if (shootDate >= today) return false;
+    if (p['סטטוס'] !== 'ממתין ליום צילום') return false;
+    return true;
+  });
+  if (!toUpdate.length) return;
+
+  let updated = 0;
+  for (const p of toUpdate) {
+    try {
+      await notionAPI('PATCH', '/pages/' + p.id, {
+        properties: { 'סטטוס': { status: { name: 'ממתין לעריכה' } } }
+      });
+      p['סטטוס'] = 'ממתין לעריכה';
+      updated++;
+    } catch(e) { console.warn('Status update failed:', p['שם פרויקט'], e.message); }
+  }
+  if (updated > 0) {
+    renderProjects();
+    showToast(`✓ ${updated} פרויקטים עודכנו ל"ממתין לעריכה"`);
+  }
+}
+
 async function checkAutoFollowups() {
   if (!projects.length) return;
   const today = new Date();
