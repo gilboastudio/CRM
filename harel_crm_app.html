@@ -920,6 +920,26 @@ const STATUS_COLORS = {
   'לא נסגר':         { color: '#9a4a4a', bg: '#f5eaea' },  // אדום
 };
 
+function dateColor(s) {
+  if (!s) return 'var(--text2)';
+  if (s === 'ממתין ליום צילום') return '#2980b9';
+  if (s === 'ממתין לעריכה') return '#d4a017';
+  if (['נמסר ללקוח','ממתין לתשלום','מכירת ספקים'].includes(s)) return '#e07b2a';
+  if (s === 'Done') return '#27ae60';
+  if (s === 'בוטל') return '#c0392b';
+  return 'var(--text2)';
+}
+
+function dateColor(s) {
+  if (!s) return 'var(--text2)';
+  if (s === 'ממתין ליום צילום') return '#2980b9';
+  if (s === 'ממתין לעריכה') return '#d4a017';
+  if (['נמסר ללקוח','ממתין לתשלום','מכירת ספקים'].includes(s)) return '#c0851a';
+  if (s === 'Done') return '#27ae60';
+  if (s === 'בוטל') return '#c0392b';
+  return 'var(--text2)';
+}
+
 function statusColor(s) {
   return STATUS_COLORS[s]?.color || 'var(--text3)';
 }
@@ -980,8 +1000,8 @@ function renderProjects() {
           ${clientLabel ? `<span style="font-size:12px;color:var(--text2)">${clientLabel}</span>` : ''}
         </div>
         <div style="display:flex;align-items:baseline;gap:16px">
-          ${p['date:מועד צילום:start'] ? `<span style="font-size:13px;font-weight:400;color:var(--text2)">${p['date:מועד צילום:start'].split('-').reverse().join('.')}</span>` : ''}
-          ${p['date:מועד צילום:start'] ? `<span style="color:var(--border2);font-weight:300;margin:0 2px">|</span>` : ''}
+          ${p['date:מועד צילום:start'] ? `<span style="font-size:13px;font-weight:400;color:${dateColor(p['סטטוס'])}">${p['date:מועד צילום:start'].split('-').reverse().join('.')}</span>` : ''}
+          ${p['date:מועד צילום:start'] ? `<span style="color:var(--border2);font-weight:300;margin:0 4px">|</span>` : ''}
           <span class="card-amount">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</span>
         </div>
       </div>
@@ -1190,7 +1210,7 @@ function renderSummaries() {
   }
 
   document.getElementById('summaries-list').innerHTML = list.map(s => `
-    <div class="project-card" style="margin-bottom:12px">
+    <div style="border:2px solid var(--border2);margin-bottom:16px;padding:16px 20px;background:var(--surface)">
       <div class="card-row">
         <div>
           <span class="card-title">${s['שם פרויקט']||'—'}</span>
@@ -1319,14 +1339,15 @@ function renderCalendar() {
           <span style="font-size:13px;font-weight:700;color:var(--green)">${fmt(weekTotal)}</span>
         </div>
         ${wps.map(p=>`
-          <div class="pitem" onclick="openProject('${p.id}')" style="margin-bottom:4px">
-            <div>
-              <span style="font-size:13px;font-weight:600">${p['שם פרויקט']||'—'}</span>
-              ${p['לקוח-שם']?`<span style="font-size:11px;color:var(--text2);margin-right:6px">${p['לקוח-שם']}</span>`:''}
+          <div onclick="openProject('${p.id}')" style="border:1.5px solid var(--border2);padding:12px 14px;margin-bottom:8px;cursor:pointer;background:var(--bg);transition:background 0.1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--bg)'">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <span style="font-size:13px;font-weight:500">${p['שם פרויקט']||'—'}</span>
+              <span style="font-size:13px;font-weight:500">${fmt(p['סכום הצעה'])}</span>
             </div>
-            <div class="pitem-right">
-              <span class="badge badge-default">📅 ${p['date:מועד צילום:start']}</span>
-              <span style="font-size:13px;font-weight:600">${fmt(p['סכום הצעה'])}</span>
+            <div style="display:flex;gap:12px;align-items:center">
+              <span style="font-size:11px;color:var(--text2)">${p['לקוח-שם']||''}</span>
+              <span style="font-size:11px;color:${dateColor(p['סטטוס'])}">${p['date:מועד צילום:start']?.split('-').reverse().join('.')||''}</span>
+              <span style="font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:${statusColor(p['סטטוס'])}">${p['סטטוס']||''}</span>
             </div>
           </div>`).join('')}
       </div>`;
@@ -1751,21 +1772,23 @@ async function openProject(id) {
           <div class="field">
             <label>${f}</label>
             <div style="border:1px solid var(--border2);background:var(--surface)">
-              <div style="display:flex;align-items:center;gap:2px;padding:4px 8px;border-bottom:1px solid var(--border);background:var(--surface2)">
-                <button type="button" onmousedown="event.preventDefault();document.execCommand('bold')"
+              <div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:2px;padding:4px 8px;border-bottom:1px solid var(--border);background:var(--surface2)">
+                <button type="button" onmousedown="event.preventDefault();event.stopPropagation();document.execCommand('bold')"
                   style="width:28px;height:24px;border:1px solid transparent;background:transparent;cursor:pointer;font-weight:700;font-size:13px;font-family:inherit;color:var(--text);display:flex;align-items:center;justify-content:center">B</button>
                 <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
-                <button type="button" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#111111')"
+                <button type="button" onmousedown="event.preventDefault();event.stopPropagation();document.execCommand('foreColor',false,'#111111')"
                   title="שחור" style="width:16px;height:16px;background:#111111;border:none;cursor:pointer;border-radius:50%;flex-shrink:0"></button>
-                <button type="button" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#c0392b')"
+                <button type="button" onmousedown="event.preventDefault();event.stopPropagation();document.execCommand('foreColor',false,'#c0392b')"
                   title="אדום" style="width:16px;height:16px;background:#c0392b;border:none;cursor:pointer;border-radius:50%;flex-shrink:0"></button>
-                <button type="button" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#27ae60')"
+                <button type="button" onmousedown="event.preventDefault();event.stopPropagation();document.execCommand('foreColor',false,'#27ae60')"
                   title="ירוק" style="width:16px;height:16px;background:#27ae60;border:none;cursor:pointer;border-radius:50%;flex-shrink:0"></button>
-                <button type="button" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#2980b9')"
+                <button type="button" onmousedown="event.preventDefault();event.stopPropagation();document.execCommand('foreColor',false,'#2980b9')"
                   title="כחול" style="width:16px;height:16px;background:#2980b9;border:none;cursor:pointer;border-radius:50%;flex-shrink:0"></button>
               </div>
               <div id="sm-${f}" contenteditable="true"
                 data-field="${f}"
+                onclick="event.stopPropagation()"
+                onmousedown="event.stopPropagation()"
                 style="min-height:72px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);line-height:1.6;outline:none;direction:rtl"
                 >${smFields[f]||''}</div>
             </div>
@@ -2731,36 +2754,58 @@ async function autoUpdateStatuses() {
 async function checkAutoFollowups() {
   if (!projects.length) return;
   const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
   const overdue = projects.filter(p => {
     if (p['סטטוס עסקי'] === 'לא נסגר' || p['סטטוס עסקי'] === 'נסגר') return false;
     const fu = p['date:תאריך פולואפ:start'];
     if (!fu) {
-      // No followup date — check if stuck in early stage for 5+ days
       const entry = p['date:תאריך הזנה:start'];
       if (!entry) return false;
       const days = Math.floor((today - new Date(entry)) / 86400000);
       const earlyStages = ['שיחה נכנסת','הצעה נשלחה','ממתין לאישור'];
       return days >= 5 && earlyStages.includes(p['סטטוס']);
     }
-    return fu <= today.toISOString().split('T')[0];
+    return fu <= todayStr;
   });
-  if (overdue.length && !sessionStorage.getItem('crm_followup_sent_today')) {
-    sessionStorage.setItem('crm_followup_sent_today', '1');
-    await sendFollowupEmail(overdue);
+  if (overdue.length && !sessionStorage.getItem('crm_followup_shown_today')) {
+    sessionStorage.setItem('crm_followup_shown_today', '1');
+    showFollowupNotification(overdue);
   }
 }
 
-async function sendFollowupEmail(projects) {
-  const lines = projects.map(p =>
-    `• ${p['שם פרויקט']||'—'} — ${p['לקוח-שם']||''} (${p['סטטוס']||''})`
-  ).join('\n');
-  const body = `שלום הראל,\n\nהפרויקטים הבאים מחכים לפולואפ:\n\n${lines}\n\nCRM הראל גלבוע`;
-  try {
-    await notionAPI('POST', '/followup-email', { to: 'gilboa.studio@gmail.com', subject: `פולואפ: ${projects.length} פרויקטים ממתינים`, body });
-  } catch(e) { console.log('Email via server failed, opening mailto'); }
-  // Fallback — mailto link
-  const mailto = `mailto:gilboa.studio@gmail.com?subject=${encodeURIComponent(`פולואפ: ${projects.length} פרויקטים ממתינים`)}&body=${encodeURIComponent(body)}`;
-  window.open(mailto);
+function showFollowupNotification(items) {
+  const existing = document.getElementById('followup-popup');
+  if (existing) existing.remove();
+
+  const popup = document.createElement('div');
+  popup.id = 'followup-popup';
+  popup.style.cssText = `
+    position:fixed;bottom:32px;left:50%;transform:translateX(-50%);
+    background:var(--surface);border:1px solid var(--border2);
+    padding:20px 24px;z-index:998;min-width:320px;max-width:480px;
+    box-shadow:0 4px 24px rgba(0,0,0,0.12);direction:rtl;
+  `;
+  popup.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--text)">פולואפ ממתין</span>
+      <button onclick="document.getElementById('followup-popup').remove()"
+        style="border:none;background:transparent;cursor:pointer;font-size:16px;color:var(--text2);line-height:1">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${items.map(p=>`
+        <div onclick="document.getElementById('followup-popup').remove();openProject('${p.id}')"
+          style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;gap:12px"
+          onmouseover="this.style.background='var(--surface2)'"
+          onmouseout="this.style.background='transparent'">
+          <span style="font-size:13px">${p['שם פרויקט']||'—'}</span>
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap">${p['לקוח-שם']||''}</span>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:12px;font-size:10px;color:var(--text3);letter-spacing:1px;text-align:center">${items.length} פרויקטים ממתינים לפולואפ</div>
+  `;
+  document.body.appendChild(popup);
+  // Auto-close after 10 seconds
+  setTimeout(() => { if (popup.parentNode) popup.remove(); }, 10000);
 }
 </script>
 </body>
