@@ -944,7 +944,6 @@ async function loadProjects() {
     await loadClientNames(clientIds);
     projects.forEach(p => {
       if (Array.isArray(p['לקוח']) && p['לקוח'].length) {
-        const cid = normalizeId(p['לקוח'][0]);
         const allNames = p['לקוח'].map(id => {
           const nid = normalizeId(id);
           return clientNames[nid] || clientNames[id] || '';
@@ -1282,7 +1281,7 @@ async function loadSummaries() {
       return {
         id: page.id,
         'שם פרויקט': (props['שם פרויקט']?.title||[]).map(t=>t.plain_text).join(''),
-        'לקוח': gt(props['לקוח'],'text'),
+        'לקוח': (props['לקוח']?.relation||[]).map(r=>normalizeId(r.id||'')),
         'תאריך צילום': gt(props['תאריך צילום'],'date'),
         'סקטור': gt(props['סקטור'],'select'),
         'קטגוריה': gt(props['קטגוריה'],'text'),
@@ -1784,7 +1783,16 @@ async function openProject(id) {
               <input type="number" value="${p['סכום הצעה']!=null?p['סכום הצעה']:''}" placeholder="הזן סכום" onchange="updateNumber('${id}','סכום הצעה',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)">
             </div>
             <div class="detail-item"><div class="label">הכנסה סופית</div><div class="value" style="color:var(--green)">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</div></div>
-            <div class="detail-item"><div class="label">לקוח</div><div class="value">${p['לקוח-שם']||'—'}</div></div>
+            <div class="detail-item">
+            <div class="label">לקוח</div>
+            <div class="value" style="margin-bottom:4px">${p['לקוח-שם']||'—'}</div>
+            <input type="text" placeholder="+ לקוח שני" 
+              id="modal-client2-${id}"
+              list="clients-datalist"
+              autocomplete="off"
+              style="width:100%;padding:4px 0;border:none;border-bottom:1px solid var(--border);font-size:11px;font-family:var(--font);background:transparent;outline:none;color:var(--text2)"
+              onchange="addSecondClient('${id}',this.value)">
+          </div>
             <div class="detail-item">
             <div class="label">מועד צילום</div>
             <input type="date" class="dp-input" onclick="DP.open(this,event)" readonly value="${p['date:מועד צילום:start']||''}" onchange="updateDate('${id}','מועד צילום',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-sans);background:var(--surface);color:var(--text)">
@@ -2258,6 +2266,32 @@ async function saveSale() {
     showToast('✓ מכירה נשמרה בהצלחה');
     closeModal();
     await loadSuppliers();
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+async function addSecondClient(projectId, clientName) {
+  if (!clientName.trim()) return;
+  const p = projects.find(x => x.id === projectId);
+  if (!p) return;
+  const existing = Array.isArray(p['לקוח']) ? p['לקוח'] : [];
+  try {
+    const clientId = await findOrCreateClient(clientName.trim());
+    if (!clientId) return;
+    const nid = normalizeId(clientId);
+    if (existing.includes(nid) || existing.includes(clientId)) return; // already there
+    const newRelations = [...existing.map(id => ({id})), {id: clientId}];
+    await notionAPI('PATCH', '/pages/' + projectId, {
+      properties: { 'לקוח': { relation: newRelations } }
+    });
+    p['לקוח'] = [...existing, nid];
+    clientNames[nid] = clientName.trim();
+    const allNames = p['לקוח'].map(id => clientNames[normalizeId(id)] || clientNames[id] || '').filter(Boolean);
+    p['לקוח-שם'] = allNames.join(' + ');
+    renderProjects();
+    showToast('✓ לקוח שני נוסף');
+    // Clear input
+    const input = document.getElementById('modal-client2-' + projectId);
+    if (input) { input.value = ''; input.placeholder = '✓ ' + clientName; }
   } catch(e) { showToast('שגיאה: ' + e.message); }
 }
 
