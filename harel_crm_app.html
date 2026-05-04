@@ -626,7 +626,8 @@
 <script>
 // ─── Config ───────────────────────────────────────────────────────────────
 const DB_PROJECTS = '462d1169d9814c3a806c843f53703942';
-const DB_SUMMARIES = '34fe323d0ee881fa9c62000b3db799ab'; // collection ID — do not change
+const DB_SUMMARIES = 'd88269cb4c494a608688485f98bb6196'; // PERMANENT — do not change
+
 const SECTORS = ['פרטי','מבנה ציבור','מבנה חינוך','מבנה תעשייה','מסחרי'];
 const SECTOR_CATEGORIES = {
   'פרטי':         ['בית פרטי','דירה','פנטהאוז','בניין מגורים'],
@@ -1242,7 +1243,7 @@ function renderCalendar() {
     html += `<div style="min-height:70px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px;${isToday?'background:var(--blue-bg)':''}">
       <div style="font-size:12px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--blue)':'var(--text2)'};margin-bottom:3px">${d}</div>
       ${dayProjects.map(p=>`
-        <div onclick="openProject('${p.id}')" style="font-size:10px;font-weight:600;background:var(--accent);color:var(--surface);border-radius:3px;padding:2px 5px;margin-bottom:2px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="${p['שם פרויקט']||''}">${p['שם פרויקט']||'—'}</div>`).join('')}
+        <div onclick="openProject('${p.id}')" style="font-size:10px;font-weight:600;background:var(--text);color:var(--bg);padding:2px 5px;margin-bottom:2px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="${p['שם פרויקט']||''}">${p['שם פרויקט']||'—'}</div>`).join('')}
     </div>`;
     dayCount++;
   }
@@ -2558,18 +2559,14 @@ async function saveProjectSummary(projectId, projectName, clientName, shootDate,
     'שם פרויקט': { title: [{ text: { content: projectName } }] },
     'לקוח': { rich_text: [{ text: { content: clientName } }] },
   };
-  // Add project relation only if it exists in DB
-  try { props['פרויקט'] = { relation: [{ id: projectId }] }; } catch(e) {}
+  // Project relation removed — not in summaries DB
   if (sector) props['סקטור'] = { select: { name: sector } };
   if (shootDate) props['תאריך צילום'] = { date: { start: shootDate } };
   const fields = ['סיור לוקיישן','הערכות לצילומים','צילומים','עריכה','סיכום'];
-  // Read from contenteditable divs (innerHTML for rich text)
   fields.forEach(f => {
     const el = document.getElementById('sm-' + f);
-    const val = el ? el.innerText || '' : '';
-    const html = el ? el.innerHTML || '' : '';
-    // Save as rich text with HTML preserved in content
-    props[f] = { rich_text: [{ text: { content: html } }] };
+    const val = el ? (el.innerText || el.textContent || '') : '';
+    props[f] = { rich_text: [{ text: { content: val.trim() } }] };
   });
   showToast('שומר סיכום...');
   try {
