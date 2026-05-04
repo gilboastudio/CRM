@@ -296,7 +296,7 @@
     letter-spacing: 1px;
   }
   .client-info { flex: 1; }
-  .client-name { font-size: 14px; font-weight: 400; color: var(--text); }
+  .client-name { font-size: 14px; font-weight: 400; color: var(--text); white-space: normal; word-break: break-word; }
   .client-meta { font-size: 11px; color: var(--text3); margin-top: 3px; letter-spacing: 0.5px; }
 
   /* ─── Modal ─── */
@@ -1944,9 +1944,59 @@ function autoPrice() {
   if (pr) document.getElementById('aspr').value = pr;
 }
 
+async function saveClientEdit(clientId, oldName) {
+  const newName = document.getElementById('cl-name-edit')?.value.trim();
+  const contact = document.getElementById('cl-contact-edit')?.value.trim();
+  const phone = document.getElementById('cl-phone-edit')?.value.trim();
+  const email = document.getElementById('cl-email-edit')?.value.trim();
+  if (!newName) { showToast('שם משרד לא יכול להיות ריק'); return; }
+
+  // Find client ID if not provided
+  let cid = clientId;
+  if (!cid) {
+    const cl = clients.find(x => x['שם משרד'] === oldName);
+    if (cl) cid = cl.id;
+  }
+  if (!cid) { showToast('לא נמצא לקוח לעדכון'); return; }
+
+  const props = {
+    'שם משרד': { title: [{ text: { content: newName } }] }
+  };
+  if (contact !== undefined) props['איש קשר'] = { rich_text: [{ text: { content: contact } }] };
+  if (phone !== undefined) props['טלפון'] = { phone_number: phone || null };
+  if (email !== undefined) props['מייל'] = { email: email || null };
+
+  showToast('שומר...');
+  try {
+    await notionAPI('PATCH', '/pages/' + cid, { properties: props });
+    // Update local cache
+    const cl = clients.find(x => x.id === cid);
+    if (cl) {
+      cl['שם משרד'] = newName;
+      cl['איש קשר'] = contact;
+      cl['טלפון'] = phone;
+      cl['מייל'] = email;
+    }
+    // Update clientNames cache
+    clientNames[normalizeId(cid)] = newName;
+    clientNames[cid] = newName;
+    // Update projects
+    projects.forEach(p => {
+      if (p['לקוח-שם'] === oldName || p['לקוח-שם']?.includes(oldName)) {
+        p['לקוח-שם'] = p['לקוח-שם'].replace(oldName, newName);
+      }
+    });
+    showToast('✓ פרטי לקוח עודכנו');
+    closeModal();
+    renderClients();
+    renderProjects();
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
 function openClientModal(name) {
   const projs = projects.filter(p=>p['לקוח-שם']===name);
   const total = projs.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
+  const cl = clients.find(x=>x['שם משרד']===name)||{};
   openModal(`
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
       <div class="modal">
@@ -1955,12 +2005,31 @@ function openClientModal(name) {
           <button class="icon-btn btn-ghost" onclick="closeModal()" style="color:var(--text)">✕</button>
         </div>
         <div class="modal-body">
-          ${(() => { const cl = clients.find(x=>x['שם משרד']===name)||{}; return cl['טלפון']||cl['מייל']||cl['איש קשר'] ? `
-          <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;gap:16px;flex-wrap:wrap">
-            ${cl['איש קשר']?`<span>👤 ${cl['איש קשר']}</span>`:''}
-            ${cl['טלפון']?`<a href="tel:${cl['טלפון']}" style="color:var(--text);text-decoration:none">📞 ${cl['טלפון']}</a>`:''}
-            ${cl['מייל']?`<a href="mailto:${cl['מייל']}" style="color:var(--text);text-decoration:none">✉ ${cl['מייל']}</a>`:''}
-          </div>` : ''; })()}
+          <div class="section-title">פרטי לקוח</div>
+          <div class="detail-grid" style="margin-bottom:16px">
+            <div class="detail-item">
+              <div class="label">שם משרד</div>
+              <input type="text" id="cl-name-edit" value="${cl['שם משרד']||name}"
+                style="width:100%;padding:6px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;color:var(--text);outline:none">
+            </div>
+            <div class="detail-item">
+              <div class="label">איש קשר</div>
+              <input type="text" id="cl-contact-edit" value="${cl['איש קשר']||''}" placeholder="שם איש קשר"
+                style="width:100%;padding:6px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;color:var(--text);outline:none">
+            </div>
+            <div class="detail-item">
+              <div class="label">טלפון</div>
+              <input type="tel" id="cl-phone-edit" value="${cl['טלפון']||''}" placeholder="טלפון"
+                style="width:100%;padding:6px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;color:var(--text);outline:none">
+            </div>
+            <div class="detail-item">
+              <div class="label">מייל</div>
+              <input type="email" id="cl-email-edit" value="${cl['מייל']||''}" placeholder="מייל"
+                style="width:100%;padding:6px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;color:var(--text);outline:none">
+            </div>
+          </div>
+          <button class="btn btn-primary" style="margin-bottom:20px;width:100%" 
+            onclick="saveClientEdit('${cl.id||''}','${name}')">שמור פרטים</button>
           <div class="detail-grid">
             <div class="detail-item"><div class="label">פרויקטים</div><div class="value">${projs.length}</div></div>
             <div class="detail-item"><div class="label">שווי כולל</div><div class="value">${fmt(total)}</div></div>
