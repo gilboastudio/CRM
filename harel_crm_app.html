@@ -1788,7 +1788,7 @@ async function openProject(id) {
             <div class="value" style="margin-bottom:4px">${p['לקוח-שם']||'—'}</div>
             <input type="text" placeholder="+ לקוח שני" 
               id="modal-client2-${id}"
-              list="clients-datalist"
+              list="global-clients-datalist"
               autocomplete="off"
               style="width:100%;padding:4px 0;border:none;border-bottom:1px solid var(--border);font-size:11px;font-family:var(--font);background:transparent;outline:none;color:var(--text2)"
               onchange="addSecondClient('${id}',this.value)">
@@ -2275,10 +2275,13 @@ async function addSecondClient(projectId, clientName) {
   if (!p) return;
   const existing = Array.isArray(p['לקוח']) ? p['לקוח'] : [];
   try {
+    // findOrCreateClient finds existing client by name — no duplicates
     const clientId = await findOrCreateClient(clientName.trim());
     if (!clientId) return;
     const nid = normalizeId(clientId);
-    if (existing.includes(nid) || existing.includes(clientId)) return; // already there
+    // Check if already linked to this project
+    const alreadyLinked = existing.some(id => normalizeId(id) === nid || id === clientId);
+    if (alreadyLinked) { showToast('לקוח זה כבר מקושר לפרויקט'); return; }
     const newRelations = [...existing.map(id => ({id})), {id: clientId}];
     await notionAPI('PATCH', '/pages/' + projectId, {
       properties: { 'לקוח': { relation: newRelations } }
@@ -2325,12 +2328,18 @@ function openNewProject() {
   else updateSupplierDatalist();
   // Populate client datalist
   setTimeout(() => {
-    const names = [...new Set(projects.map(p => p['לקוח-שם']).filter(Boolean))].sort();
-    const opts = names.map(n => `<option value="${n}">`).join('');
+    // Use actual clients from DB, not just project names
+    const clientOptsArr = clients.length > 0 
+      ? clients.map(cl => (cl['שם משרד']||cl['שם']||'')).filter(Boolean).sort()
+      : [...new Set(projects.map(p => p['לקוח-שם']).filter(Boolean))].sort();
+    const opts = clientOptsArr.map(n => `<option value="${n}">`).join('');
     const dl = document.getElementById('clients-datalist');
     if (dl) dl.innerHTML = opts;
     const dl2 = document.getElementById('clients-datalist2');
     if (dl2) dl2.innerHTML = opts;
+    // Update global datalist for modal use
+    const gdl = document.getElementById('global-clients-datalist');
+    if (gdl) gdl.innerHTML = opts;
   }, 50);
   openModal(`
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
@@ -2962,5 +2971,6 @@ function showFollowupNotification(items) {
   setTimeout(() => { if (popup.parentNode) popup.remove(); }, 10000);
 }
 </script>
+<datalist id="global-clients-datalist"></datalist>
 </body>
 </html>
