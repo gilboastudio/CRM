@@ -1796,6 +1796,10 @@ async function openProject(id) {
               <option value="">בחר...</option>
               ${['המלצה','לקוח חוזר','פנייה יזומה על ידי','אינסטגרם','מייל','טלפון','אחר'].map(s=>`<option ${p['מקור פנייה']===s?'selected':''}>${s}</option>`).join('')}
             </select>
+            <input type="text" placeholder="פרט מקור פנייה..."
+              id="src-other-${id}"
+              style="display:${p['מקור פנייה']==='אחר'?'block':'none'};margin-top:6px;width:100%;padding:7px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;outline:none"
+              onchange="updateProp('${id}','הערות',this.value)">
           </div>
           <div class="detail-item">
             <div class="label">סקטור</div>
@@ -2257,6 +2261,11 @@ async function saveSale() {
   } catch(e) { showToast('שגיאה: ' + e.message); }
 }
 
+function toggleOtherSource(val, inputId) {
+  const input = document.getElementById(inputId);
+  if (input) input.style.display = val === 'אחר' ? 'block' : 'none';
+}
+
 function toggleDarkMode() {
   const isDark = document.body.classList.toggle('dark-mode');
   localStorage.setItem('crm_dark', isDark ? '1' : '0');
@@ -2308,7 +2317,7 @@ function openNewProject() {
               <input id="nc2" type="text" placeholder="לקוח נוסף..." list="clients-datalist2" autocomplete="off">
               <datalist id="clients-datalist2"></datalist>
             </div>
-            <div class="field"><label>מקור פנייה</label><select id="nso">
+            <div class="field"><label>מקור פנייה</label><select id="nso" onchange="toggleOtherSource(this.value,'nso-other')">
               <option value="">בחר...</option>
               <option>המלצה</option>
               <option>לקוח חוזר</option>
@@ -2317,7 +2326,8 @@ function openNewProject() {
               <option>מייל</option>
               <option>טלפון</option>
               <option>אחר</option>
-            </select></div>
+            </select>
+            <input id="nso-other" type="text" placeholder="פרט מקור פנייה..." style="display:none;margin-top:6px;width:100%;padding:7px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;outline:none"></div>
           </div>
           <div class="row2">
             <div class="field"><label>סוג שירות</label><select id="nsr">
@@ -2469,7 +2479,8 @@ async function saveProject() {
     'סטטוס': { status: { name: selectedStatus } },
     'סטטוס עסקי': { select: { name: selectedBiz } },
   };
-  const src = document.getElementById('nso')?.value; if(src) props['מקור פנייה'] = { select: { name: src } };
+  const src = document.getElementById('nso')?.value; const srcFinal = src === 'אחר' ? (document.getElementById('nso-other')?.value.trim() || 'אחר') : src;
+  if(srcFinal) props['מקור פנייה'] = { select: { name: srcFinal } };
   const srv = document.getElementById('nsr')?.value; if(srv) props['סוג שירות'] = { select: { name: srv } };
   const scp = document.getElementById('nsc')?.value; if(scp) props['היקף'] = { select: { name: scp } };
   const sect = document.getElementById('nsect')?.value; if(sect) props['סקטור'] = { select: { name: sect } };
