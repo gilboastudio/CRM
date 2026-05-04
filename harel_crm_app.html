@@ -509,6 +509,164 @@
     .header { padding: 0 20px; }
     .nav { padding: 0 20px; }
   }</style>
+
+<!-- Custom Datepicker -->
+<style>
+.dp-wrap { position: relative; display: inline-block; width: 100%; }
+.dp-input {
+  width: 100%; padding: 9px 0;
+  border: none; border-bottom: 1px solid var(--border2);
+  background: transparent; color: var(--text);
+  font-size: 13px; font-family: var(--font);
+  cursor: pointer; outline: none; text-align: right;
+}
+.dp-input:focus { border-bottom-color: var(--text); }
+.dp-cal {
+  position: fixed; z-index: 9999;
+  background: var(--surface); border: 1px solid var(--border2);
+  padding: 12px; min-width: 260px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  display: none;
+}
+.dp-cal.open { display: block; }
+.dp-cal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.dp-cal-title { font-size: 12px; font-weight: 500; letter-spacing: 1px; }
+.dp-cal-nav {
+  cursor: pointer; font-size: 16px; color: var(--text2);
+  background: none; border: none; padding: 2px 6px;
+  font-family: var(--font); line-height: 1;
+}
+.dp-cal-nav:hover { color: var(--text); }
+.dp-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+.dp-cal-day-name {
+  text-align: center; font-size: 9px; letter-spacing: 1px;
+  color: var(--text3); padding: 4px 0;
+  text-transform: uppercase;
+}
+.dp-cal-day {
+  text-align: center; font-size: 12px; padding: 5px 2px;
+  cursor: pointer; border-radius: 0; color: var(--text);
+  transition: background 0.1s;
+}
+.dp-cal-day:hover { background: var(--surface2); }
+.dp-cal-day.today { font-weight: 700; color: var(--blue, #2980b9); }
+.dp-cal-day.selected { background: var(--text); color: var(--bg); }
+.dp-cal-day.empty { cursor: default; }
+.dp-cal-day.empty:hover { background: none; }
+</style>
+<script>
+// Custom Datepicker
+const DP = {
+  cal: null,
+  input: null,
+  year: 0,
+  month: 0,
+
+  init() {
+    if (document.getElementById('dp-global-cal')) return;
+    const cal = document.createElement('div');
+    cal.id = 'dp-global-cal';
+    cal.className = 'dp-cal';
+    cal.innerHTML = `
+      <div class="dp-cal-header">
+        <button class="dp-cal-nav" onclick="DP.prevMonth()">›</button>
+        <span class="dp-cal-title" id="dp-cal-title"></span>
+        <button class="dp-cal-nav" onclick="DP.nextMonth()">‹</button>
+      </div>
+      <div class="dp-cal-grid" id="dp-cal-grid"></div>
+    `;
+    document.body.appendChild(cal);
+    this.cal = cal;
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.dp-wrap') && !e.target.closest('#dp-global-cal')) {
+        this.close();
+      }
+    });
+  },
+
+  open(input, e) {
+    this.init();
+    this.input = input;
+    const val = input.value;
+    const now = new Date();
+    if (val) {
+      const d = new Date(val + 'T12:00:00');
+      this.year = d.getFullYear();
+      this.month = d.getMonth();
+    } else {
+      this.year = now.getFullYear();
+      this.month = now.getMonth();
+    }
+    this.render();
+    this.cal.classList.add('open');
+    // Position calendar
+    const rect = input.getBoundingClientRect();
+    const calH = 280;
+    let top = rect.bottom + 4;
+    if (top + calH > window.innerHeight) top = rect.top - calH - 4;
+    this.cal.style.top = top + 'px';
+    this.cal.style.right = (window.innerWidth - rect.right) + 'px';
+    this.cal.style.left = 'auto';
+    e && e.stopPropagation();
+  },
+
+  close() {
+    if (this.cal) this.cal.classList.remove('open');
+    this.input = null;
+  },
+
+  render() {
+    const heMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+    document.getElementById('dp-cal-title').textContent = heMonths[this.month] + ' ' + this.year;
+    const grid = document.getElementById('dp-cal-grid');
+    // Day names RTL: א ב ג ד ה ו ש
+    const days = ['א','ב','ג','ד','ה','ו','ש'];
+    let html = days.map(d => `<div class="dp-cal-day-name">${d}</div>`).join('');
+    const first = new Date(this.year, this.month, 1);
+    const last = new Date(this.year, this.month + 1, 0);
+    const startDow = first.getDay(); // 0=Sun
+    const today = new Date().toISOString().split('T')[0];
+    const selected = this.input ? this.input.value : '';
+    // Empty cells
+    for (let i = 0; i < startDow; i++) {
+      html += '<div class="dp-cal-day empty"></div>';
+    }
+    for (let d = 1; d <= last.getDate(); d++) {
+      const ds = this.year + '-' + String(this.month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const isToday = ds === today ? ' today' : '';
+      const isSel = ds === selected ? ' selected' : '';
+      html += `<div class="dp-cal-day${isToday}${isSel}" onclick="DP.pick('${ds}')">${d}</div>`;
+    }
+    grid.innerHTML = html;
+  },
+
+  pick(ds) {
+    if (!this.input) return;
+    this.input.value = ds;
+    // Format display
+    const parts = ds.split('-');
+    this.input.setAttribute('data-display', parts[2] + '/' + parts[1] + '/' + parts[0]);
+    // Trigger change event
+    this.input.dispatchEvent(new Event('change', {bubbles: true}));
+    this.close();
+  },
+
+  prevMonth() {
+    this.month--;
+    if (this.month < 0) { this.month = 11; this.year--; }
+    this.render();
+  },
+
+  nextMonth() {
+    this.month++;
+    if (this.month > 11) { this.month = 0; this.year++; }
+    this.render();
+  }
+};
+</script>
 </head>
 <body>
 
@@ -1629,7 +1787,7 @@ async function openProject(id) {
             <div class="detail-item"><div class="label">לקוח</div><div class="value">${p['לקוח-שם']||'—'}</div></div>
             <div class="detail-item">
             <div class="label">מועד צילום</div>
-            <input type="date" value="${p['date:מועד צילום:start']||''}" onchange="updateDate('${id}','מועד צילום',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-sans);background:var(--surface);color:var(--text)">
+            <input type="date" class="dp-input" onclick="DP.open(this,event)" readonly value="${p['date:מועד צילום:start']||''}" onchange="updateDate('${id}','מועד צילום',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-sans);background:var(--surface);color:var(--text)">
           </div>
             <div class="detail-item"><div class="label">סוג שירות</div><div class="value">${p['סוג שירות']||'—'}</div></div>
           <div class="detail-item">
@@ -1684,7 +1842,7 @@ async function openProject(id) {
           <div class="section-title">פולואפ</div>
           <div class="row2">
             <div class="field"><label>תאריך פולואפ</label>
-              <input type="date" value="${p['date:תאריך פולואפ:start']||''}" onchange="updateDate('${id}','תאריך פולואפ',this.value)">
+              <input type="date" class="dp-input" onclick="DP.open(this,event)" readonly value="${p['date:תאריך פולואפ:start']||''}" onchange="updateDate('${id}','תאריך פולואפ',this.value)">
             </div>
           </div>
           ${suppliersHtml}
@@ -2186,11 +2344,11 @@ function openNewProject() {
           </div>
           <div class="row2">
             <div class="field"><label>סכום הצעה (₪)</label><input id="npr" type="number" placeholder="0"></div>
-            <div class="field"><label>מועד צילום</label><input id="ndt" type="date"></div>
+            <div class="field"><label>מועד צילום</label><input id="ndt" type="date" class="dp-input" placeholder="בחר תאריך..." onclick="DP.open(this,event)" onkeydown="return false" autocomplete="off" readonly></div>
           </div>
           <div class="row2">
             <div class="field"><label>מיקום</label><input id="nlc" type="text" placeholder="עיר / כתובת"></div>
-            <div class="field"><label>תאריך פולואפ</label><input id="nfu" type="date"></div>
+            <div class="field"><label>תאריך פולואפ</label><input id="nfu" type="date" class="dp-input" placeholder="בחר תאריך..." onclick="DP.open(this,event)" onkeydown="return false" autocomplete="off" readonly></div>
           </div>
           <div class="row2">
             <div class="field"><label>סטטוס תפעולי</label>
@@ -2218,7 +2376,7 @@ function openNewProject() {
             </div>
           </div>
           <div class="field"><label>הערות שיחה ראשונה</label><textarea id="nnt" placeholder="מה עלה בשיחה..."></textarea></div>
-          <div class="field"><label>תאריך הזנה למערכת</label><input id="nentry" type="date" value="${todayStr}"></div>
+          <div class="field"><label>תאריך הזנה למערכת</label><input id="nentry" type="date" class="dp-input" value="${todayStr}" onclick="DP.open(this,event)" onkeydown="return false" autocomplete="off" readonly></div>
           <hr class="divider">
           <div class="section-title">ספקים משתתפים</div>
           <div id="sup-rows"></div>
