@@ -296,7 +296,7 @@
     letter-spacing: 1px;
   }
   .client-info { flex: 1; }
-  .client-name { font-size: 14px; font-weight: 400; color: var(--text); white-space: normal; word-break: break-word; }
+  .client-name { font-size: 14px; font-weight: 400; color: var(--text); white-space: normal; word-break: break-word; overflow: visible; text-overflow: unset; max-width: none; }
   .client-meta { font-size: 11px; color: var(--text3); margin-top: 3px; letter-spacing: 0.5px; }
 
   /* ─── Modal ─── */
@@ -1185,21 +1185,35 @@ function renderProjects() {
 }
 
 function renderClients() {
-  // Group projects by client
+  // Group projects by individual client (not combined name)
   const grouped = {};
   projects.forEach(p => {
-    const name = p['לקוח-שם'] || 'לא מוגדר';
-    if (!grouped[name]) grouped[name] = [];
-    grouped[name].push(p);
+    const ids = Array.isArray(p['לקוח']) ? p['לקוח'] : [];
+    if (ids.length === 0) {
+      // Fallback: use לקוח-שם split by +
+      const names = (p['לקוח-שם']||'').split(' + ').map(n=>n.trim()).filter(Boolean);
+      names.forEach(name => {
+        if (!grouped[name]) grouped[name] = [];
+        if (!grouped[name].includes(p)) grouped[name].push(p);
+      });
+    } else {
+      ids.forEach(id => {
+        const nid = normalizeId(id);
+        const name = clientNames[nid] || clientNames[id] || '';
+        if (!name) return;
+        if (!grouped[name]) grouped[name] = [];
+        if (!grouped[name].includes(p)) grouped[name].push(p);
+      });
+    }
   });
-  const entries = Object.entries(grouped).filter(([n])=>n!=='לא מוגדר').sort((a,b)=>b[1].length-a[1].length);
+  const entries = Object.entries(grouped).filter(([n])=>n&&n!=='לא מוגדר').sort((a,b)=>b[1].length-a[1].length);
   if (!entries.length) { document.getElementById('clients-content').innerHTML='<div class="empty">אין לקוחות</div>'; return; }
   document.getElementById('clients-content').innerHTML = entries.map(([name, projs]) => {
     const total = projs.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
     const active = projs.filter(p=>p['סטטוס עסקי']==='בתהליך').length;
     const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
     const cl = clients.find(x => x['שם משרד']===name)||{};
-    return `<div class="client-card" onclick="openClientModal('${name.replace(/'/g,"\\'")}')">
+    return `<div class="client-card" onclick="openClientModal('${name.replace(/'/g,"\\'")}','${cl.id||''}')">
       <div style="display:flex;gap:12px;align-items:center">
         <div class="client-avatar">${initials}</div>
         <div class="client-info">
@@ -1993,7 +2007,7 @@ async function saveClientEdit(clientId, oldName) {
   } catch(e) { showToast('שגיאה: ' + e.message); }
 }
 
-function openClientModal(name) {
+function openClientModal(name, clientId) {
   const projs = projects.filter(p=>p['לקוח-שם']===name);
   const total = projs.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
   const cl = clients.find(x=>x['שם משרד']===name)||{};
@@ -2029,7 +2043,7 @@ function openClientModal(name) {
             </div>
           </div>
           <button class="btn btn-primary" style="margin-bottom:20px;width:100%" 
-            onclick="saveClientEdit('${cl.id||''}','${name}')">שמור פרטים</button>
+            onclick="saveClientEdit('${clientId||cl.id||''}','${name}')">שמור פרטים</button>
           <div class="detail-grid">
             <div class="detail-item"><div class="label">פרויקטים</div><div class="value">${projs.length}</div></div>
             <div class="detail-item"><div class="label">שווי כולל</div><div class="value">${fmt(total)}</div></div>
