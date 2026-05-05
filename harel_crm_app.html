@@ -1199,7 +1199,13 @@ function renderClients() {
     } else {
       ids.forEach(id => {
         const nid = normalizeId(id);
-        const name = clientNames[nid] || clientNames[id] || '';
+        // Try clientNames first, then search clients array by normalized ID
+        let name = clientNames[nid] || clientNames[id] || '';
+        if (!name) {
+          const cl = clients.find(x => normalizeId(x.id) === nid);
+          name = cl ? (cl['שם משרד'] || '') : '';
+          if (name) { clientNames[nid] = name; clientNames[id] = name; }
+        }
         if (!name) return;
         if (!grouped[name]) grouped[name] = [];
         if (!grouped[name].includes(p)) grouped[name].push(p);
