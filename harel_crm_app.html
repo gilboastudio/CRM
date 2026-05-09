@@ -1818,17 +1818,24 @@ async function openProject(id) {
             <div class="detail-item"><div class="label">הכנסה סופית</div><div class="value" style="color:var(--green)">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</div></div>
             <div class="detail-item">
             <div class="label">לקוח</div>
-            ${(Array.isArray(p['לקוח']) && p['לקוח'].length > 0 ? p['לקוח'] : ['_ph_']).map((cid, i) => {
-              const nid = normalizeId(cid === '_ph_' ? '' : cid);
-              const cname = cid === '_ph_' ? (p['לקוח-שם']||'').split(' + ')[0] : (clientNames[nid]||clientNames[cid]||'');
-              return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
-                + '<input type="text" value="' + cname.replace(/"/g,'&quot;') + '" placeholder="שם לקוח..." list="global-clients-datalist" autocomplete="off"'
-                + ' data-cid="' + (cid === '_ph_' ? '' : cid) + '"'
-                + ' style="flex:1;padding:5px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;outline:none;color:var(--text)"'
-                + ' onchange="updateClientInProject('' + id + '', this)">'
-                + (i > 0 ? '<button onclick="removeClientFromProject('' + id + '','' + cid + '',this.parentElement)" style="border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--text3)">✕</button>' : '')
-                + '</div>';
-            }).join('')}
+            <div id="client-edit-${id}">
+              <input type="text" 
+                value="${(p['לקוח-שם']||'').split(' + ')[0]||''}"
+                placeholder="שם לקוח ראשי..."
+                list="global-clients-datalist"
+                autocomplete="off"
+                data-index="0"
+                style="width:100%;padding:5px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;outline:none;color:var(--text);margin-bottom:4px"
+                onchange="updateClientInProject('${id}', this)">
+              ${(p['לקוח-שם']||'').split(' + ').slice(1).map((name, i) => `
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                <input type="text" value="${name}" placeholder="לקוח נוסף..."
+                  list="global-clients-datalist" autocomplete="off"
+                  style="flex:1;padding:5px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;outline:none;color:var(--text)"
+                  onchange="updateClientInProject('${id}', this)">
+                <button onclick="this.parentElement.remove()" style="border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--text3)">✕</button>
+              </div>`).join('')}
+            </div>
             <button onclick="addClientRow('${id}')" style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:none;background:transparent;cursor:pointer;color:var(--text3);padding:4px 0;font-family:var(--font)">+ לקוח נוסף</button>
           </div>
             <div class="detail-item">
