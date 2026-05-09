@@ -2424,6 +2424,30 @@ async function addSecondClient(projectId, clientName) {
   } catch(e) { showToast('שגיאה: ' + e.message); }
 }
 
+function addNewProjectDate() {
+  const container = document.getElementById('ndt-container');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+  const input = document.createElement('input');
+  input.type = 'date';
+  input.className = 'dp-input';
+  input.readOnly = true;
+  input.placeholder = 'בחר תאריך...';
+  input.autocomplete = 'off';
+  input.style.cssText = 'flex:1;padding:6px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;color:var(--text)';
+  input.onclick = (e) => DP.open(input, e);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '✕';
+  btn.style.cssText = 'border:none;background:transparent;cursor:pointer;font-size:14px;color:var(--text3);padding:2px 4px';
+  btn.onclick = () => row.remove();
+  row.appendChild(input);
+  row.appendChild(btn);
+  container.appendChild(row);
+  DP.open(input, {stopPropagation:()=>{}});
+}
+
 function toggleOtherSource(val, inputId) {
   const input = document.getElementById(inputId);
   if (input) input.style.display = val === 'אחר' ? 'block' : 'none';
@@ -2658,7 +2682,17 @@ function openNewProject() {
           </div>
           <div class="row2">
             <div class="field"><label>סכום הצעה (₪)</label><input id="npr" type="number" placeholder="0"></div>
-            <div class="field"><label>מועד צילום</label><input id="ndt" type="date" class="dp-input" placeholder="בחר תאריך..." onclick="DP.open(this,event)" onkeydown="return false" autocomplete="off" readonly></div>
+            <div class="field"><label>מועד צילום</label>
+              <div id="ndt-container">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                  <input id="ndt" type="date" class="dp-input" placeholder="בחר תאריך..." onclick="DP.open(this,event)" readonly autocomplete="off"
+                    style="flex:1;padding:6px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;color:var(--text)">
+                  <button type="button" onclick="this.closest('div').remove()" style="border:none;background:transparent;cursor:pointer;font-size:14px;color:var(--text3);padding:2px 4px">✕</button>
+                </div>
+              </div>
+              <button type="button" onclick="addNewProjectDate()"
+                style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:none;background:transparent;cursor:pointer;color:var(--text3);padding:4px 0;font-family:var(--font)">+ הוסף מועד</button>
+            </div>
           </div>
           <div class="row2">
             <div class="field"><label>מיקום</label><input id="nlc" type="text" placeholder="עיר / כתובת"></div>
