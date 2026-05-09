@@ -998,6 +998,7 @@ async function loadAllClients() {
       all = all.concat(res.results || []);
       cursor = res.next_cursor;
     } while (cursor);
+    clients = all.map(parseClient);
     all.forEach(page => {
       const props = page.properties || {};
       const titleProp = props['שם משרד'] || Object.values(props).find(p => p.type === 'title');
@@ -1005,7 +1006,7 @@ async function loadAllClients() {
       if (name) {
         const nid = normalizeId(page.id);
         clientNames[nid] = name;
-        clientNames[page.id] = name; // also store with dashes
+        clientNames[page.id] = name;
       }
     });
   } catch(e) { console.warn('loadAllClients failed:', e.message); }
@@ -1706,7 +1707,14 @@ function switchTab(tab, el) {
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   ['projects','clients','suppliers','calendar','summaries','finance'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'':'none');
-  if (tab==='clients') { if (!projects.length) loadProjects().then(renderClients); else renderClients(); }
+  if (tab==='clients') {
+    const doRender = () => {
+      if (!clients.length) loadAllClients().then(renderClients);
+      else renderClients();
+    };
+    if (!projects.length) loadProjects().then(doRender);
+    else doRender();
+  }
   if (tab==='suppliers' && !suppliers.length) loadSuppliers();
   if (tab==='calendar') renderCalendar();
   if (tab==='summaries') loadSummaries();
@@ -2016,7 +2024,9 @@ async function saveClientEdit(clientId, oldName) {
 function openClientModal(name, clientId) {
   const projs = projects.filter(p=>p['לקוח-שם']===name);
   const total = projs.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
-  const cl = clients.find(x=>x['שם משרד']===name)||{};
+  // Find client: first by ID, then by name
+  const cl = (clientId ? clients.find(x => normalizeId(x.id) === normalizeId(clientId) || x.id === clientId) : null)
+    || clients.find(x => x['שם משרד'] === name) || {};
   openModal(`
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
       <div class="modal">
