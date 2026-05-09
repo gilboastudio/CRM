@@ -238,7 +238,7 @@
   .project-card:first-child { border-top: 1px solid var(--border); }
   .project-card:hover { background: var(--surface2); padding-left: 12px; padding-right: 12px; margin: 0 -12px; }
   .card-row { display: flex; align-items: center; justify-content: space-between; }
-  .card-title { font-size: 14px; font-weight: 400; letter-spacing: 0.2px; color: var(--text); white-space: normal; overflow: visible; }
+  .card-title { font-size: 14px; font-weight: 400; letter-spacing: 0.2px; color: var(--text); }
   .card-amount { font-size: 14px; font-weight: 500; letter-spacing: -0.3px; color: var(--text); }
   .card-meta { display: flex; gap: 16px; align-items: center; margin-top: 5px; flex-wrap: wrap; }
 
@@ -784,13 +784,510 @@ const DP = {
 <script>
 // ─── Config ───────────────────────────────────────────────────────────────
 const DB_PROJECTS = '462d1169d9814c3a806c843f53703942';
-// DB סיכומי פרויקט — ID קבוע לצמיתות, לא משתנה לעולם
-const DB_SUMMARIES = 'd88269cb4c494a608688485f98bb6196';
+const DB_SUMMARIES = 'd88269cb4c494a608688485f98bb6196'; // PERMANENT — do not change
 
-async function ensureSummariesDB() {
-  return true; // ה-ID קבוע — תמיד עובד
+const SECTORS = ['פרטי','מבנה ציבור','מבנה חינוך','מבנה תעשייה','מסחרי'];
+const SECTOR_CATEGORIES = {
+  'פרטי':         ['בית פרטי','דירה','פנטהאוז','בניין מגורים'],
+  'מבנה ציבור':   ['מוזיאון','ממשלתי','בית חולים','מבנה תרבות'],
+  'מבנה חינוך':   ['אוניברסיטה','תיכון','בית ספר','גן ילדים'],
+  'מבנה תעשייה':  ['מפעל','מרלו"ג'],
+  'מסחרי':        ['משרדים','בית מלון','מסעדה','חנות','לובי'],
+};
+const DB_SUPPLIERS = 'e3c62c03be9042c5b28d001293746fc2';
+const DB_CLIENTS = '046d5ac7985644e090f35249f060a510';
+const NOTION_VERSION = '2022-06-28';
+// השרת הלוקלי מבצע proxy ל-Notion API
+// Auto-detect server URL — works locally and on Render
+const LOCAL_PROXY = window.location.hostname === 'localhost' 
+  ? 'http://localhost:8765/notion'
+  : window.location.origin + '/notion';
+
+const PIPELINE = ['שיחה נכנסת','הצעה נשלחה','ממתין לאישור','מאושר - בתיאום','סיור לוקיישן','ממתין ליום צילום','יום צילום','ממתין לעריכה','נמסר ללקוח','ממתין לתשלום','מכירת ספקים','Done','בוטל'];
+const PKGS = ['5 תמונות — 1000₪','10 תמונות — 1500₪','20 תמונות — 2000₪','כל הסט — 2500₪','מחיר מותאם'];
+const PKG_PRICES = {'5 תמונות — 1000₪':1000,'10 תמונות — 1500₪':1500,'20 תמונות — 2000₪':2000,'כל הסט — 2500₪':2500};
+
+let token = '';
+let projects = [], suppliers = [], clients = [];
+let clientNames = {}; // id -> name cache
+let newSuppliers = [];
+
+// ─── Notion API ───────────────────────────────────────────────────────────
+async function notionAPI(method, path, body) {
+  const url = LOCAL_PROXY + path;
+  const res = await fetch(url, {
+    method,
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json',
+      'Notion-Version': NOTION_VERSION
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  return res.json();
 }
 
+async function queryDB(dbId, filter, sorts) {
+  let all = [], cursor = undefined;
+  do {
+    const body = {};
+    if (filter) body.filter = filter;
+    if (sorts) body.sorts = sorts;
+    if (cursor) body.start_cursor = cursor;
+    body.page_size = 100;
+    const res = await notionAPI('POST', `/databases/${dbId}/query`, body);
+    all = all.concat(res.results || []);
+    cursor = res.next_cursor;
+  } while (cursor);
+  return all;
+}
+
+// ─── Data parsing ─────────────────────────────────────────────────────────
+function propText(page, name) {
+  const p = page.properties?.[name];
+  if (!p) return '';
+  if (p.type === 'title') return p.title?.map(t=>t.plain_text).join('') || '';
+  if (p.type === 'rich_text') return p.rich_text?.map(t=>t.plain_text).join('') || '';
+  if (p.type === 'select') return p.select?.name || '';
+  if (p.type === 'number') return p.number ?? null;
+  if (p.type === 'checkbox') return p.checkbox;
+  if (p.type === 'date') return p.date?.start || '';
+  if (p.type === 'status') return p.status?.name || '';
+  if (p.type === 'relation') return (p.relation || []).map(r => normalizeId(r.id || ''));
+  if (p.type === 'rollup') return p.rollup?.number ?? null;
+  if (p.type === 'formula') return p.formula?.number ?? null;
+  return '';
+}
+
+function parseProject(page) {
+  return {
+    id: page.id,
+    url: page.url,
+    'שם פרויקט': propText(page,'שם פרויקט'),
+    'לקוח': propText(page,'לקוח'), // array of ids
+    'לקוח-שם': '', // filled later
+    'סטטוס': propText(page,'סטטוס'),
+    'סטטוס עסקי': propText(page,'סטטוס עסקי'),
+    'סכום הצעה': propText(page,'סכום הצעה') ?? null,
+    'הכנסה סופית': propText(page,'הכנסה סופית'),
+    'סה״כ הכנסות ספקים': propText(page,'סה״כ הכנסות ספקים'),
+    'date:מועד צילום:start': propText(page,'מועד צילום'),
+    'date:תאריך הזנה:start': propText(page,'תאריך הזנה'),
+    'date:תאריך פולואפ:start': propText(page,'תאריך פולואפ'),
+    'הערות': propText(page,'הערות'),
+    'סקטור': propText(page,'סקטור'),
+    'קטגוריה': propText(page,'קטגוריה'),
+    'ממתין לתשלום': propText(page,'ממתין לתשלום'),
+    'מיקום': propText(page,'מיקום'),
+    'סוג שירות': propText(page,'סוג שירות'),
+    'היקף': propText(page,'היקף'),
+    'מקור פנייה': propText(page,'מקור פנייה'),
+    'הערות שיחה ראשונה': propText(page,'הערות שיחה ראשונה'),
+    'סיור לוקיישן': propText(page,'סיור לוקיישן'),
+    'חוזה נחתם': propText(page,'חוזה נחתם'),
+    'מקדמה שולמה': propText(page,'מקדמה שולמה'),
+    'יתרה שולמה': propText(page,'יתרה שולמה'),
+    'הסכם זכויות': propText(page,'הסכם זכויות'),
+    'חשבונית הוצאה': propText(page,'חשבונית הוצאה'),
+    'ספקים': propText(page,'ספקים'),
+  };
+}
+
+function parseSupplier(page) {
+  return {
+    id: page.id,
+    'שם ספק': propText(page,'שם ספק'),
+    'מודל': propText(page,'מודל'),
+    'חבילה': propText(page,'חבילה'),
+    'כמות תמונות': propText(page,'כמות תמונות'),
+    'סכום מכירה — רכישה': propText(page,'סכום מכירה — רכישה'),
+    'עלות ספק משתתף': propText(page,'עלות ספק משתתף'),
+    'פרויקט': propText(page,'פרויקט'),
+    'תשלום התקבל': propText(page,'תשלום התקבל'),
+    'חשבון עסקה נשלח': propText(page,'חשבון עסקה נשלח'),
+    'קישור חותמת מים נשלח': propText(page,'קישור חותמת מים נשלח'),
+    'חוזה / הסכם זכויות': propText(page,'חוזה / הסכם זכויות'),
+    'קישור הורדה נשלח': propText(page,'קישור הורדה נשלח'),
+    'איש קשר': propText(page,'איש קשר'),
+    'טלפון': propText(page,'טלפון'),
+    'מייל': propText(page,'מייל'),
+    'תפקיד': propText(page,'תפקיד'),
+  };
+}
+
+function parseClient(page) {
+  return {
+    id: page.id,
+    'שם משרד': propText(page,'שם משרד'),
+    'איש קשר': propText(page,'איש קשר'),
+    'טלפון': propText(page,'טלפון'),
+    'מייל': propText(page,'מייל'),
+    'פרויקטים': propText(page,'פרויקטים'),
+  };
+}
+
+// ─── Load data ────────────────────────────────────────────────────────────
+async function loadProjects() {
+  document.getElementById('projects-list').innerHTML = '<div class="loading">טוען פרויקטים...</div>';
+  try {
+    const [pages] = await Promise.all([
+      queryDB(DB_PROJECTS, null, [{ property: 'תאריך הזנה', direction: 'descending' }, { timestamp: 'created_time', direction: 'descending' }]),
+      loadAllClients()
+    ]);
+    projects = pages.map(parseProject);
+    // Map client IDs to names
+    const clientIds = [...new Set(projects.flatMap(p => Array.isArray(p['לקוח']) ? p['לקוח'] : []))];
+    await loadClientNames(clientIds);
+    projects.forEach(p => {
+      if (Array.isArray(p['לקוח']) && p['לקוח'].length) {
+        const allNames = p['לקוח'].map(id => {
+          const nid = normalizeId(id);
+          return clientNames[nid] || clientNames[id] || '';
+        }).filter(Boolean);
+        p['לקוח-שם'] = allNames.join(' + ');
+      }
+      p['ספקים-משתתפים'] = [];
+    });
+    // Load participating suppliers for all projects
+    await loadParticipatingSuppliers();
+    renderProjects();
+    renderStats();
+    setTimeout(checkAutoFollowups, 2000);
+    setTimeout(autoUpdateStatuses, 3000);
+  } catch(e) {
+    document.getElementById('projects-list').innerHTML = '<div class="loading" style="color:var(--red)">שגיאה: ' + e.message + '<br><br><small>ודא שהשרת רץ: python3 crm_server.py</small></div>';
+  }
+}
+
+function normalizeId(id) {
+  return (id || '').replace(/-/g, '').toLowerCase();
+}
+
+async function loadParticipatingSuppliers() {
+  try {
+    const res = await notionAPI('POST', '/databases/' + DB_SUPPLIERS + '/query', {
+      filter: { property: 'מודל', select: { equals: 'השתתפות בצילומים' } },
+      page_size: 100
+    });
+    const sups = (res.results || []).map(parseSupplier);
+    sups.forEach(s => {
+      const projectIds = Array.isArray(s['פרויקט']) ? s['פרויקט'] : [];
+      projectIds.forEach(pid => {
+        const nid = normalizeId(pid);
+        const p = projects.find(x => normalizeId(x.id) === nid);
+        if (p && s['שם ספק']) {
+          if (!p['ספקים-משתתפים']) p['ספקים-משתתפים'] = [];
+          p['ספקים-משתתפים'].push(s['שם ספק']);
+        }
+      });
+    });
+  } catch(e) { console.warn('loadParticipatingSuppliers failed:', e.message); }
+}
+
+async function loadAllClients() {
+  try {
+    let all = [], cursor = undefined;
+    do {
+      const body = { page_size: 100 };
+      if (cursor) body.start_cursor = cursor;
+      const res = await notionAPI('POST', '/databases/' + DB_CLIENTS + '/query', body);
+      all = all.concat(res.results || []);
+      cursor = res.next_cursor;
+    } while (cursor);
+    clients = all.map(parseClient);
+    all.forEach(page => {
+      const props = page.properties || {};
+      const titleProp = props['שם משרד'] || Object.values(props).find(p => p.type === 'title');
+      const name = titleProp ? (titleProp.title || []).map(t => t.plain_text || '').join('').trim() : '';
+      if (name) {
+        const nid = normalizeId(page.id);
+        clientNames[nid] = name;
+        clientNames[page.id] = name;
+      }
+    });
+  } catch(e) { console.warn('loadAllClients failed:', e.message); }
+}
+
+async function loadClientNames(ids) {
+  for (const id of ids) {
+    const nid = normalizeId(id);
+    if (clientNames[nid] !== undefined) continue;
+    try {
+      const page = await notionAPI('GET', '/pages/' + id, null);
+      const props = page.properties || {};
+      const titleProp = props['שם משרד'] || Object.values(props).find(p => p.type === 'title');
+      const name = titleProp ? (titleProp.title || []).map(t => t.plain_text || '').join('').trim() : '';
+      clientNames[nid] = name || '';
+      clientNames[id] = name || '';
+    } catch(e) { clientNames[nid] = ''; }
+  }
+}
+
+async function loadSuppliers() {
+  document.getElementById('suppliers-list').innerHTML = '<div class="loading">טוען ספקים...</div>';
+  try {
+    const pages = await queryDB(DB_SUPPLIERS);
+    suppliers = pages.map(parseSupplier);
+    renderSuppliers();
+  } catch(e) {
+    document.getElementById('suppliers-list').innerHTML = '<div class="loading">שגיאה: ' + e.message + '</div>';
+  }
+}
+
+async function loadClients() {
+  document.getElementById('clients-content').innerHTML = '<div class="loading">טוען לקוחות...</div>';
+  try {
+    const pages = await queryDB(DB_CLIENTS);
+    clients = pages.map(parseClient);
+    renderClients();
+  } catch(e) {
+    document.getElementById('clients-content').innerHTML = '<div class="loading">שגיאה: ' + e.message + '</div>';
+  }
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────
+function fmt(n) { if (!n && n !== 0) return '—'; return Number(n).toLocaleString('he-IL') + ' ₪'; }
+
+// פלטת פסטל לסטטוסים תפעולים + עסקיים
+const STATUS_COLORS = {
+  // סטטוס תפעולי — ספקטרום עיגול חיים של פרויקט
+  'שיחה נכנסת':      { color: '#5b7fa6', bg: '#edf2f8' },  // כחול-אפור עדין
+  'הצעה נשלחה':      { color: '#7a6fa6', bg: '#f0edf8' },  // סגול עדין
+  'ממתין לאישור':    { color: '#a67a5b', bg: '#f8f0ed' },  // חום-ורוד
+  'מאושר - בתיאום':  { color: '#5b8a6e', bg: '#edf5f1' },  // ירוק-אפור
+  'סיור לוקיישן':    { color: '#6e8a5b', bg: '#f1f5ed' },  // ירוק-זית
+  'ממתין ליום צילום':{ color: '#a6915b', bg: '#f8f4ed' },  // זהב עדין
+  'יום צילום':       { color: '#5b7aa6', bg: '#edf3f8' },  // כחול בהיר
+  'ממתין לעריכה':    { color: '#a65b7a', bg: '#f8edf3' },  // ורוד-סגול
+  'נמסר ללקוח':      { color: '#5b9a78', bg: '#edf7f2' },  // ירוק בינוני
+  'ממתין לתשלום':    { color: '#c47a3a', bg: '#fdf3ea' },  // כתום עמוק
+  'מכירת ספקים':     { color: '#6a9a5b', bg: '#eff7ed' },  // ירוק בהיר
+  'Done':             { color: '#3a7a4a', bg: '#eaf5ee' },  // ירוק כהה
+  'בוטל':            { color: '#9a4a4a', bg: '#f5eaea' },  // אדום עדין
+  // סטטוס עסקי
+  'בתהליך':          { color: '#333333', bg: '#f0f0f0' },  // שחור-אפור
+  'נסגר':            { color: '#3a7a4a', bg: '#eaf5ee' },  // ירוק
+  'לא נסגר':         { color: '#9a4a4a', bg: '#f5eaea' },  // אדום
+};
+
+function dateColor(s) {
+  if (!s) return 'var(--text2)';
+  if (s === 'ממתין ליום צילום') return '#2980b9';
+  if (s === 'ממתין לעריכה') return '#d4a017';
+  if (['נמסר ללקוח','ממתין לתשלום','מכירת ספקים'].includes(s)) return '#e07b2a';
+  if (s === 'Done') return '#27ae60';
+  if (s === 'בוטל') return '#c0392b';
+  return 'var(--text2)';
+}
+
+function dateColor(s) {
+  if (!s) return 'var(--text2)';
+  if (s === 'ממתין ליום צילום') return '#2980b9';
+  if (s === 'ממתין לעריכה') return '#d4a017';
+  if (['נמסר ללקוח','ממתין לתשלום','מכירת ספקים'].includes(s)) return '#c0851a';
+  if (s === 'Done') return '#27ae60';
+  if (s === 'בוטל') return '#c0392b';
+  return 'var(--text2)';
+}
+
+function statusColor(s) {
+  return STATUS_COLORS[s]?.color || 'var(--text3)';
+}
+
+function statusBg(s) {
+  return STATUS_COLORS[s]?.bg || 'transparent';
+}
+
+function sbc(s) {
+  if (!s) return 'badge-default';
+  if (s === 'נסגר' || s === 'Done') return 'badge-done';
+  if (s === 'לא נסגר' || s === 'בוטל') return 'badge-red';
+  if (s === 'בתהליך') return 'badge-inprog';
+  return 'badge-default';
+}
+
+function renderStats() {
+  const act = projects.filter(p=>p['סטטוס עסקי']==='בתהליך');
+  const tA = act.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
+  const cl = projects.filter(p=>p['סטטוס עסקי']==='נסגר');
+  const tC = cl.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
+  const today = new Date().toISOString().split('T')[0];
+  const fu = projects.filter(p=>p['date:תאריך פולואפ:start']&&p['date:תאריך פולואפ:start']<=today).length;
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-card"><div class="stat-label">פרויקטים פעילים</div><div class="stat-value">${act.length}</div></div>
+    <div class="stat-card"><div class="stat-label">שווי הצעות פתוחות</div><div class="stat-value" style="font-size:17px">${fmt(tA)}</div></div>
+    <div class="stat-card"><div class="stat-label">סגירות</div><div class="stat-value" style="font-size:17px">${fmt(tC)}</div></div>
+    <div class="stat-card"><div class="stat-label">פולואפים דחופים</div><div class="stat-value" style="${fu>0?'color:var(--red)':''}">${fu}</div></div>`;
+}
+
+function renderProjects() {
+  const sf = document.getElementById('fs')?.value||'';
+  const bf = document.getElementById('fb')?.value||'';
+  const sq = (document.getElementById('fsearch')?.value||'').toLowerCase().trim();
+  let list = [...projects];
+  if (sf) list = list.filter(p=>p['סטטוס']===sf);
+  if (bf) list = list.filter(p=>p['סטטוס עסקי']===bf);
+  if (sq) list = list.filter(p=>
+    (p['שם פרויקט']||'').toLowerCase().includes(sq) ||
+    (p['לקוח-שם']||'').toLowerCase().includes(sq) ||
+    (p['מיקום']||'').toLowerCase().includes(sq)
+  );
+  const today = new Date().toISOString().split('T')[0];
+  if (!list.length) { document.getElementById('projects-list').innerHTML='<div class="empty">אין פרויקטים להצגה</div>'; return; }
+
+  const active = list.filter(p => p['סטטוס עסקי'] === 'בתהליך' || !p['סטטוס עסקי']);
+  const done   = list.filter(p => p['סטטוס עסקי'] === 'נסגר').sort((a,b) => (b['date:מועד צילום:start']||'').localeCompare(a['date:מועד צילום:start']||''));
+  const lost   = list.filter(p => p['סטטוס עסקי'] === 'לא נסגר');
+
+  function cardHtml(p) {
+    const fu = p['date:תאריך פולואפ:start'];
+    const isDue = fu && fu <= today;
+    const clientLabel = p['לקוח-שם'] || '';
+    return `<div class="project-card" onclick="openProject('${p.id}')">
+      <div class="card-row">
+        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+          <span class="card-title">${p['שם פרויקט']||'—'}</span>
+          ${clientLabel ? `<span style="font-size:12px;color:var(--text2)">${clientLabel}</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:baseline;gap:16px">
+          ${p['date:מועד צילום:start'] ? `<span style="font-size:13px;font-weight:400;color:${dateColor(p['סטטוס'])}">${p['date:מועד צילום:start'].split('-').reverse().join('.')}</span>` : ''}
+          ${p['date:מועד צילום:start'] ? `<span style="color:var(--border2);font-weight:300;margin:0 4px">|</span>` : ''}
+          <span class="card-amount">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</span>
+        </div>
+      </div>
+      <div class="card-meta">
+        ${p['סטטוס']?`<span style="font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:${statusColor(p['סטטוס'])};background:${statusBg(p['סטטוס'])};padding:2px 7px;display:inline-block">${p['סטטוס']}</span>`:''}
+        ${p['לקוח-שם']?`<span class="badge badge-default">${p['לקוח-שם']}</span>`:''}
+
+        ${p['סקטור']?`<span class="badge badge-default">${p['סקטור']}${p['קטגוריה']?' — '+p['קטגוריה']:''}</span>`:''}
+        ${isDue?`<span class="followup-alert">↑ פולואפ</span>`:''}
+      </div>
+    </div>`;
+  }
+
+  function sectionHeader(title, count) {
+    return `<div class="section-divider">
+      <span>${title}</span>
+      <div class="section-divider-line"></div>
+      <span>${count}</span>
+    </div>`;
+  }
+
+  let html = '';
+  if (active.length) html += sectionHeader('בתהליך', active.length) + active.map(cardHtml).join('');
+  if (done.length)   html += sectionHeader('נסגר', done.length) + done.map(cardHtml).join('');
+  if (lost.length)   html += sectionHeader('לא נסגר', lost.length) + lost.map(cardHtml).join('');
+
+  document.getElementById('projects-list').innerHTML = html || '<div class="empty">אין פרויקטים להצגה</div>';
+}
+
+function renderClients() {
+  // Group projects by individual client (not combined name)
+  const grouped = {};
+  projects.forEach(p => {
+    const ids = Array.isArray(p['לקוח']) ? p['לקוח'] : [];
+    if (ids.length === 0) {
+      // Fallback: use לקוח-שם split by +
+      const names = (p['לקוח-שם']||'').split(' + ').map(n=>n.trim()).filter(Boolean);
+      names.forEach(name => {
+        if (!grouped[name]) grouped[name] = [];
+        if (!grouped[name].includes(p)) grouped[name].push(p);
+      });
+    } else {
+      ids.forEach(id => {
+        const nid = normalizeId(id);
+        // Try clientNames first, then search clients array by normalized ID
+        let name = clientNames[nid] || clientNames[id] || '';
+        if (!name) {
+          const cl = clients.find(x => normalizeId(x.id) === nid);
+          name = cl ? (cl['שם משרד'] || '') : '';
+          if (name) { clientNames[nid] = name; clientNames[id] = name; }
+        }
+        if (!name) return;
+        if (!grouped[name]) grouped[name] = [];
+        if (!grouped[name].includes(p)) grouped[name].push(p);
+      });
+    }
+  });
+  const entries = Object.entries(grouped).filter(([n])=>n&&n!=='לא מוגדר').sort((a,b)=>b[1].length-a[1].length);
+  if (!entries.length) { document.getElementById('clients-content').innerHTML='<div class="empty">אין לקוחות</div>'; return; }
+  document.getElementById('clients-content').innerHTML = entries.map(([name, projs]) => {
+    const total = projs.reduce((s,p)=>s+(Number(p['סכום הצעה'])||0),0);
+    const active = projs.filter(p=>p['סטטוס עסקי']==='בתהליך').length;
+    const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const cl = clients.find(x => x['שם משרד']===name)||{};
+    return `<div class="client-card" onclick="openClientModal('${name.replace(/'/g,"\\'")}','${cl.id||''}')">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="client-avatar">${initials}</div>
+        <div class="client-info">
+          <div class="client-name">${name}</div>
+          <div class="client-meta">${projs.length} פרויקטים | ${active} פעילים | ${fmt(total)}</div>
+          ${cl['טלפון']?`<div style="font-size:11px;color:var(--text2);margin-top:2px">📞 ${cl['טלפון']}${cl['מייל']?' · '+cl['מייל']:''}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSuppliers() {
+  // Update project filter dropdown
+  const projSel = document.getElementById('sup-project');
+  if (projSel && projSel.options.length <= 1) {
+    const names = [...new Set(suppliers.flatMap(s => {
+      const ids = Array.isArray(s['פרויקט']) ? s['פרויקט'] : [];
+      return ids.map(id => { const p = projects.find(x=>normalizeId(x.id)===normalizeId(id)); return p?.['שם פרויקט']||''; });
+    }).filter(Boolean))].sort();
+    names.forEach(n => { const o = document.createElement('option'); o.value=n; o.textContent=n; projSel.appendChild(o); });
+  }
+
+  const sq = (document.getElementById('sup-search')?.value||'').toLowerCase();
+  const sp = document.getElementById('sup-project')?.value||'';
+  let list = suppliers.filter(s => {
+    if (sq && !(s['שם ספק']||'').toLowerCase().includes(sq)) return false;
+    if (sp) {
+      const ids = Array.isArray(s['פרויקט']) ? s['פרויקט'] : [];
+      const matched = ids.some(id => { const p = projects.find(x=>normalizeId(x.id)===normalizeId(id)); return p?.['שם פרויקט']===sp; });
+      if (!matched) return false;
+    }
+    return true;
+  });
+
+  if (!list.length) { document.getElementById('suppliers-list').innerHTML='<div class="empty">אין ספקים</div>'; return; }
+  document.getElementById('suppliers-list').innerHTML = list.map(s => {
+    const paid = s['תשלום התקבל'];
+    return `<div class="project-card" onclick="openSupplierModal('${s.id}')">
+      <div class="card-row">
+        <span class="card-title">${s['שם ספק']||'—'}</span>
+        <span class="card-amount">${fmt(s['סכום מכירה — רכישה'])}</span>
+      </div>
+      <div class="card-meta">
+        ${s['מודל']?`<span class="badge ${s['מודל']==='רכישה לאחר צילומים'?'badge-inprog':'badge-todo'}">${s['מודל']}</span>`:''}
+        ${s['חבילה']?`<span class="badge badge-default">${s['חבילה']}</span>`:''}
+        ${paid===true?`<span class="badge badge-done">שולם ✓</span>`:`<span class="badge badge-default">ממתין לתשלום</span>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateSupplierDatalist() {
+  // Get unique supplier names from loaded suppliers
+  const names = [...new Set(suppliers.map(s => s['שם ספק']).filter(Boolean))].sort();
+  // Update all datalists
+  document.querySelectorAll('#supplier-names-list').forEach(dl => {
+    dl.innerHTML = names.map(n => `<option value="${n}">`).join('');
+  });
+}
+
+let summaries = [];
+
+
+async function ensureSummariesDB() {
+  return true;
+}
 
 async function loadSummaries() {
   document.getElementById('summaries-list').innerHTML = '<div class="loading">טוען סיכומים...</div>';
@@ -1321,36 +1818,17 @@ async function openProject(id) {
             <div class="detail-item"><div class="label">הכנסה סופית</div><div class="value" style="color:var(--green)">${fmt(p['הכנסה סופית']||p['סכום הצעה'])}</div></div>
             <div class="detail-item">
             <div class="label">לקוח</div>
-            ${(Array.isArray(p['לקוח']) && p['לקוח'].length > 0 ? p['לקוח'] : ['_placeholder_']).map((cid, i) => {
-              const cname = cid === '_placeholder_' ? (p['לקוח-שם']||'') : (clientNames[normalizeId(cid)]||clientNames[cid]||'');
-              const isNew = cid === '_placeholder_';
-              return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-                <input type="text" value="${cname}" placeholder="שם לקוח..."
-                  list="global-clients-datalist"
-                  autocomplete="off"
-                  data-cid="${isNew ? '' : cid}"
-                  style="flex:1;padding:5px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;outline:none;color:var(--text)"
-                  onchange="updateClientInProject('${id}', this)">
-                ${i === 0 ? '' : `<button onclick="removeClientFromProject('${id}','${cid}',this.parentElement)" style="border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--text3)">✕</button>`}
-              </div>`;
-            }).join('')}
-            <button onclick="addClientRow('${id}')" 
-              style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:none;background:transparent;cursor:pointer;color:var(--text3);padding:4px 0;font-family:var(--font)">+ לקוח נוסף</button>
+            <div class="value" style="margin-bottom:4px">${p['לקוח-שם']||'—'}</div>
+            <input type="text" placeholder="+ לקוח שני" 
+              id="modal-client2-${id}"
+              list="global-clients-datalist"
+              autocomplete="off"
+              style="width:100%;padding:4px 0;border:none;border-bottom:1px solid var(--border);font-size:11px;font-family:var(--font);background:transparent;outline:none;color:var(--text2)"
+              onchange="addSecondClient('${id}',this.value)">
           </div>
             <div class="detail-item">
             <div class="label">מועד צילום</div>
-            <div id="shoot-dates-${id}">
-              ${(p['date:מועד צילום:start'] ? [p['date:מועד צילום:start']] : ['']).map((dt, i) => `
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-                  <input type="date" class="dp-input" onclick="DP.open(this,event)" readonly value="${dt}"
-                    onchange="updateShootDate('${id}', this, i)"
-                    style="flex:1;padding:6px 8px;border:1px solid var(--border2);font-size:13px;font-family:var(--font-sans);background:var(--surface);color:var(--text)">
-                  <button onclick="clearShootDate('${id}', this)" title="מחק תאריך"
-                    style="border:none;background:transparent;cursor:pointer;font-size:14px;color:var(--text3);padding:2px 4px;line-height:1">✕</button>
-                </div>`).join('')}
-            </div>
-            <button onclick="addShootDate('${id}')"
-              style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:none;background:transparent;cursor:pointer;color:var(--text3);padding:4px 0;font-family:var(--font)">+ הוסף מועד</button>
+            <input type="date" class="dp-input" onclick="DP.open(this,event)" readonly value="${p['date:מועד צילום:start']||''}" onchange="updateDate('${id}','מועד צילום',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-sans);background:var(--surface);color:var(--text)">
           </div>
             <div class="detail-item"><div class="label">סוג שירות</div><div class="value">${p['סוג שירות']||'—'}</div></div>
           <div class="detail-item">
@@ -1895,80 +2373,6 @@ async function saveSale() {
   } catch(e) { showToast('שגיאה: ' + e.message); }
 }
 
-async function updateClientInProject(projectId, input) {
-  const newName = input.value.trim();
-  if (!newName) return;
-  const p = projects.find(x => x.id === projectId);
-  if (!p) return;
-  const oldCid = input.getAttribute('data-cid');
-  showToast('מעדכן לקוח...');
-  try {
-    const newCid = await findOrCreateClient(newName);
-    if (!newCid) return;
-    // Build new relations list
-    let existing = Array.isArray(p['לקוח']) ? [...p['לקוח']] : [];
-    if (oldCid) {
-      // Replace existing client
-      const nOld = normalizeId(oldCid);
-      existing = existing.filter(id => normalizeId(id) !== nOld && id !== oldCid);
-    }
-    const nNew = normalizeId(newCid);
-    if (!existing.some(id => normalizeId(id) === nNew)) existing.push(nNew);
-    await notionAPI('PATCH', '/pages/' + projectId, {
-      properties: { 'לקוח': { relation: existing.map(id => ({ id })) } }
-    });
-    input.setAttribute('data-cid', newCid);
-    clientNames[nNew] = newName;
-    p['לקוח'] = existing;
-    const allNames = existing.map(id => clientNames[normalizeId(id)]||clientNames[id]||'').filter(Boolean);
-    p['לקוח-שם'] = allNames.join(' + ');
-    showToast('✓ לקוח עודכן');
-    renderProjects();
-  } catch(e) { showToast('שגיאה: ' + e.message); }
-}
-
-async function removeClientFromProject(projectId, cid, row) {
-  const p = projects.find(x => x.id === projectId);
-  if (!p) return;
-  const nid = normalizeId(cid);
-  const existing = (Array.isArray(p['לקוח']) ? p['לקוח'] : [])
-    .filter(id => normalizeId(id) !== nid && id !== cid);
-  try {
-    await notionAPI('PATCH', '/pages/' + projectId, {
-      properties: { 'לקוח': { relation: existing.map(id => ({ id })) } }
-    });
-    p['לקוח'] = existing;
-    p['לקוח-שם'] = existing.map(id => clientNames[normalizeId(id)]||'').filter(Boolean).join(' + ');
-    row?.remove();
-    showToast('✓ לקוח הוסר');
-    renderProjects();
-  } catch(e) { showToast('שגיאה: ' + e.message); }
-}
-
-function addClientRow(projectId) {
-  // Find the "+ לקוח נוסף" button and insert a new row before it
-  const btn = document.querySelector(`[onclick="addClientRow('${projectId}')"]`);
-  if (!btn) return;
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.placeholder = 'שם לקוח...';
-  input.setAttribute('list', 'global-clients-datalist');
-  input.setAttribute('autocomplete', 'off');
-  input.setAttribute('data-cid', '');
-  input.style.cssText = 'flex:1;padding:5px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;outline:none;color:var(--text)';
-  input.onchange = () => updateClientInProject(projectId, input);
-  const delBtn = document.createElement('button');
-  delBtn.textContent = '✕';
-  delBtn.style.cssText = 'border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--text3)';
-  delBtn.onclick = () => row.remove();
-  row.appendChild(input);
-  row.appendChild(delBtn);
-  btn.parentElement.insertBefore(row, btn);
-  input.focus();
-}
-
 async function addSecondClient(projectId, clientName) {
   if (!clientName.trim()) return;
   const p = projects.find(x => x.id === projectId);
@@ -1998,13 +2402,106 @@ async function addSecondClient(projectId, clientName) {
   } catch(e) { showToast('שגיאה: ' + e.message); }
 }
 
+function toggleOtherSource(val, inputId) {
+  const input = document.getElementById(inputId);
+  if (input) input.style.display = val === 'אחר' ? 'block' : 'none';
+}
+
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle('dark-mode');
+  localStorage.setItem('crm_dark', isDark ? '1' : '0');
+  document.getElementById('dark-btn').textContent = isDark ? '○' : '◐';
+}
+
+// Init dark mode from localStorage
+(function() {
+  if (localStorage.getItem('crm_dark') === '1') {
+    document.body.classList.add('dark-mode');
+    // update button after DOM ready
+    window.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('dark-btn');
+      if (btn) btn.textContent = '○';
+    });
+  }
+})();
+
+
+async function updateClientInProject(projectId, input) {
+  const newName = input.value.trim();
+  if (!newName) return;
+  const p = projects.find(x => x.id === projectId);
+  if (!p) return;
+  const oldCid = input.getAttribute('data-cid');
+  showToast('מעדכן לקוח...');
+  try {
+    const newCid = await findOrCreateClient(newName);
+    if (!newCid) return;
+    let existing = Array.isArray(p['לקוח']) ? [...p['לקוח']] : [];
+    if (oldCid) {
+      const nOld = normalizeId(oldCid);
+      existing = existing.filter(id => normalizeId(id) !== nOld && id !== oldCid);
+    }
+    const nNew = normalizeId(newCid);
+    if (!existing.some(id => normalizeId(id) === nNew)) existing.push(nNew);
+    await notionAPI('PATCH', '/pages/' + projectId, {
+      properties: { 'לקוח': { relation: existing.map(id => ({ id })) } }
+    });
+    input.setAttribute('data-cid', newCid);
+    clientNames[nNew] = newName;
+    p['לקוח'] = existing;
+    p['לקוח-שם'] = existing.map(id => clientNames[normalizeId(id)]||clientNames[id]||'').filter(Boolean).join(' + ');
+    showToast('✓ לקוח עודכן');
+    renderProjects();
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+async function removeClientFromProject(projectId, cid, row) {
+  const p = projects.find(x => x.id === projectId);
+  if (!p) return;
+  const nid = normalizeId(cid);
+  const existing = (Array.isArray(p['לקוח']) ? p['לקוח'] : [])
+    .filter(id => normalizeId(id) !== nid && id !== cid);
+  try {
+    await notionAPI('PATCH', '/pages/' + projectId, {
+      properties: { 'לקוח': { relation: existing.map(id => ({ id })) } }
+    });
+    p['לקוח'] = existing;
+    p['לקוח-שם'] = existing.map(id => clientNames[normalizeId(id)]||'').filter(Boolean).join(' + ');
+    row?.remove();
+    showToast('✓ לקוח הוסר');
+    renderProjects();
+  } catch(e) { showToast('שגיאה: ' + e.message); }
+}
+
+function addClientRow(projectId) {
+  const btn = document.querySelector('[onclick="addClientRow(\''+projectId+'\')"]');
+  if (!btn) return;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = 'שם לקוח...';
+  input.setAttribute('list', 'global-clients-datalist');
+  input.setAttribute('autocomplete', 'off');
+  input.setAttribute('data-cid', '');
+  input.style.cssText = 'flex:1;padding:5px 0;border:none;border-bottom:1px solid var(--border2);font-size:13px;font-family:var(--font);background:transparent;outline:none;color:var(--text)';
+  input.onchange = () => updateClientInProject(projectId, input);
+  const delBtn = document.createElement('button');
+  delBtn.textContent = '✕';
+  delBtn.style.cssText = 'border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--text3)';
+  delBtn.onclick = () => row.remove();
+  row.appendChild(input);
+  row.appendChild(delBtn);
+  btn.parentElement.insertBefore(row, btn);
+  input.focus();
+}
+
 async function clearShootDate(projectId, btn) {
   const row = btn.parentElement;
   const input = row.querySelector('input[type="date"]');
   const container = document.getElementById('shoot-dates-' + projectId);
-  const rows = container.querySelectorAll('div');
+  const rows = container ? container.querySelectorAll('div') : [];
   if (rows.length <= 1) {
-    // Last date — clear it
     input.value = '';
     await notionAPI('PATCH', '/pages/' + projectId, {
       properties: { 'מועד צילום': { date: null } }
@@ -2015,7 +2512,6 @@ async function clearShootDate(projectId, btn) {
     renderProjects();
   } else {
     row.remove();
-    // Save remaining dates — use first date as primary
     const remaining = [...container.querySelectorAll('input[type="date"]')].map(i => i.value).filter(Boolean);
     if (remaining.length) {
       await notionAPI('PATCH', '/pages/' + projectId, {
@@ -2039,8 +2535,7 @@ async function addShootDate(projectId) {
   input.onchange = () => updateShootDate(projectId, input);
   const clearBtn = document.createElement('button');
   clearBtn.textContent = '✕';
-  clearBtn.title = 'מחק תאריך';
-  clearBtn.style.cssText = 'border:none;background:transparent;cursor:pointer;font-size:14px;color:var(--text3);padding:2px 4px;line-height:1';
+  clearBtn.style.cssText = 'border:none;background:transparent;cursor:pointer;font-size:14px;color:var(--text3);padding:2px 4px';
   clearBtn.onclick = () => clearShootDate(projectId, clearBtn);
   newRow.appendChild(input);
   newRow.appendChild(clearBtn);
@@ -2051,7 +2546,6 @@ async function addShootDate(projectId) {
 async function updateShootDate(projectId, input) {
   const val = input.value;
   if (!val) return;
-  // Save first date as primary מועד צילום
   const container = document.getElementById('shoot-dates-' + projectId);
   const firstInput = container?.querySelector('input[type="date"]');
   const primaryDate = firstInput ? firstInput.value : val;
@@ -2065,36 +2559,6 @@ async function updateShootDate(projectId, input) {
     renderProjects();
   } catch(e) { showToast('שגיאה: ' + e.message); }
 }
-
-function toggleOtherSource(val, inputId) {
-  const input = document.getElementById(inputId);
-  if (input) input.style.display = val === 'אחר' ? 'block' : 'none';
-}
-
-function toggleDarkMode() {
-  const isDark = document.body.classList.toggle('dark-mode');
-  localStorage.setItem('crm_dark', isDark ? '1' : '0');
-  document.getElementById('dark-btn').textContent = isDark ? '○' : '◐';
-}
-
-// נקה כל ה-keys הישנים של ה-DB
-(function() {
-  // נקה כל keys ישנים של DB סיכומים — ה-ID קבוע בקוד
-  ['crm_db_summaries','crm_db_summaries_v','crm_summaries_db_v2',
-   'crm_sum_db_permanent','crm_sum_db_v3'].forEach(k => localStorage.removeItem(k));
-})();
-
-// Init dark mode from localStorage
-(function() {
-  if (localStorage.getItem('crm_dark') === '1') {
-    document.body.classList.add('dark-mode');
-    // update button after DOM ready
-    window.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('dark-btn');
-      if (btn) btn.textContent = '○';
-    });
-  }
-})();
 
 function openNewProject() {
   newSuppliers = [];
@@ -2555,7 +3019,6 @@ async function saveProjectSummary(projectId, projectName, clientName, shootDate,
     const val = el ? (el.innerText || el.textContent || '') : '';
     props[f] = { rich_text: [{ text: { content: val.trim() } }] };
   });
-  if (!await ensureSummariesDB()) return;
   showToast('שומר סיכום...');
   try {
     if (existingId) {
